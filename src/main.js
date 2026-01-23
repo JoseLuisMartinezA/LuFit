@@ -288,15 +288,12 @@ function renderRoutine() {
 
   const html = `
     <div class="day-header">
-      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-        <div style="flex: 1;">
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-            <span class="day-tag" style="background: ${color}20; color: ${color}">DÍA ${currentDay}</span>
-            <button class="edit-title-btn" onclick="window.editDayTitle()">✏️</button>
-          </div>
-          <h2 style="line-height: 1.2;">${displayTitle}</h2>
+      <div style="flex: 1;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+          <span class="day-tag" style="background: ${color}20; color: ${color}">DÍA ${currentDay}</span>
+          <button class="edit-title-btn" onclick="window.editDayTitle()">✏️</button>
         </div>
-        <button class="secondary-btn" onclick="document.getElementById('add-exercise-modal').style.display = 'flex'">+ Add Ex</button>
+        <h2 style="line-height: 1.2;">${displayTitle}</h2>
       </div>
     </div>
     
@@ -322,6 +319,10 @@ function renderRoutine() {
       `).join('')}
       ${currentExercises.length === 0 ? '<p style="text-align:center; padding: 20px; color: var(--text-secondary)">No hay ejercicios para este día.</p>' : ''}
     </div>
+
+    <button class="add-ex-bottom-btn" onclick="document.getElementById('add-exercise-modal').style.display = 'flex'">
+      <span>＋</span> Añadir Ejercicio
+    </button>
   `;
   container.innerHTML = html;
 }

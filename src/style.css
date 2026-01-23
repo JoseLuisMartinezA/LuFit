@@ -242,6 +242,36 @@ input {
   transform: scale(1.1);
 }
 
+.add-ex-bottom-btn {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 2px dashed var(--panel-border);
+  color: var(--text-secondary);
+  padding: 20px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: var(--transition);
+  margin-top: 10px;
+}
+
+.add-ex-bottom-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.add-ex-bottom-btn span {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
 /* Modal Stylings */
 .modal {
   display: none;
