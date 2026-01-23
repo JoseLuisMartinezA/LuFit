@@ -187,6 +187,28 @@ input {
   transition: var(--transition);
 }
 
+.secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.danger-btn {
+  background: rgba(255, 59, 48, 0.1);
+  border: 1px solid rgba(255, 59, 48, 0.2);
+  color: #ff4d4d;
+  padding: 12px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.danger-btn:hover {
+  background: #ff3b30;
+  color: white;
+  border-color: #ff3b30;
+}
+
 /* Modal Stylings */
 .modal {
   display: none;
@@ -316,6 +338,32 @@ input {
   color: white;
   width: 100%;
   text-align: center;
+}
+
+.delete-ex-btn {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  border: 1px solid var(--panel-border);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.delete-ex-btn:hover {
+  background: rgba(255, 59, 48, 0.15);
+  color: #ff4d4d;
+  border-color: rgba(255, 59, 48, 0.3);
+  transform: scale(1.1);
+}
+
+.delete-ex-btn::before {
+  content: '🗑️';
+  font-size: 0.9rem;
 }
 
 /* Day Selector */

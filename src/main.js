@@ -255,7 +255,7 @@ function renderRoutine() {
               <span class="exercise-sets">${ex.sets}</span>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
-              <button class="delete-ex-btn" onclick="event.stopPropagation(); window.deleteExercise(${ex.id})">×</button>
+              <button class="delete-ex-btn" onclick="event.stopPropagation(); window.deleteExercise(${ex.id})"></button>
               <div class="checkbox-wrapper">
                 <span class="checkmark" style="color: ${color}"></span>
               </div>
@@ -305,6 +305,11 @@ if (addWeekBtn) {
   });
 }
 
+const deleteWeekBtn = document.getElementById('delete-week-btn');
+if (deleteWeekBtn) {
+  deleteWeekBtn.addEventListener('click', deleteWeek);
+}
+
 const saveExBtn = document.getElementById('save-ex-btn');
 if (saveExBtn) saveExBtn.addEventListener('click', addExercise);
 
@@ -319,9 +324,41 @@ document.querySelectorAll('.day-tab').forEach(tab => {
   });
 });
 
+async function deleteWeek() {
+  if (!currentWeekId) return;
+  const weekName = weeks.find(w => w.id === currentWeekId)?.name || "esta semana";
+  if (!confirm(`¿Estás seguro de que quieres eliminar la "${weekName}"? Esto borrará todos sus ejercicios y datos.`)) return;
+
+  updateSyncStatus(true);
+  try {
+    // Eliminar ejercicios de la semana
+    await dbQuery("DELETE FROM exercises WHERE week_id = ?", [currentWeekId]);
+    // Eliminar la semana
+    await dbQuery("DELETE FROM weeks WHERE id = ?", [currentWeekId]);
+
+    // Actualizar estado local
+    weeks = weeks.filter(w => w.id !== currentWeekId);
+
+    if (weeks.length === 0) {
+      currentWeekId = null;
+      await createWeek("Semana 1");
+    } else {
+      currentWeekId = weeks[weeks.length - 1].id;
+      await loadExercises();
+    }
+
+    renderWeekSelector();
+    renderRoutine();
+  } catch (error) {
+    console.error("Error al eliminar semana:", error);
+  }
+  updateSyncStatus(false);
+}
+
 window.toggleExercise = toggleExercise;
 window.updateWeight = updateWeight;
 window.deleteExercise = deleteExercise;
+window.deleteWeek = deleteWeek;
 
 // Init
 initApp();
