@@ -58,18 +58,34 @@
         </div>
       </section>
 
-      <!-- Navigation Tabs -->
-      <nav class="day-selector">
-        <button class="day-tab active" data-day="1">Día 1</button>
-        <button class="day-tab" data-day="2">Día 2</button>
-        <button class="day-tab" data-day="3">Día 3</button>
-        <button class="day-tab" data-day="4">Día 4</button>
-      </nav>
+      <!-- Week & Day Selection -->
+      <section class="selection-area">
+        <div class="week-manager">
+          <select id="week-select" class="week-select">
+            <!-- Dynamically populated -->
+          </select>
+          <button id="add-week-btn" class="secondary-btn">+ Añadir Semana</button>
+        </div>
+
+        <nav class="day-selector">
+          <button class="day-tab active" data-day="1">Día 1</button>
+          <button class="day-tab" data-day="2">Día 2</button>
+          <button class="day-tab" data-day="3">Día 3</button>
+          <button class="day-tab" data-day="4">Día 4</button>
+        </nav>
+      </section>
 
       <!-- Routine Content -->
       <section id="routine-content" class="routine-viewer">
         <!-- Dynamically populated -->
       </section>
+
+      <!-- Add Exercise UI (Dynamic) -->
+      <div id="add-exercise-ui" class="add-exercise-card" style="display: none;">
+        <input type="text" id="new-ex-name" placeholder="Nombre del ejercicio">
+        <input type="text" id="new-ex-sets" placeholder="Sets (ej: 3 × 12)">
+        <button id="save-ex-btn" class="primary-btn">Añadir Ejercicio</button>
+      </div>
 
       <!-- Tips Section -->
       <section class="tips-section">

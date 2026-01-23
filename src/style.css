@@ -141,6 +141,96 @@ body {
   font-weight: 600;
 }
 
+/* Week Manager */
+.week-manager {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  justify-content: center;
+}
+
+.week-select {
+  background: var(--panel-color);
+  border: 1px solid var(--panel-border);
+  color: white;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 1rem;
+  outline: none;
+  cursor: pointer;
+}
+
+.secondary-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--panel-border);
+  color: white;
+  padding: 10px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.9rem;
+  transition: var(--transition);
+}
+
+.secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.add-exercise-card {
+  background: var(--panel-color);
+  border: 1px solid var(--panel-border);
+  padding: 24px;
+  border-radius: var(--radius-md);
+  margin: 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.add-exercise-card input {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--panel-border);
+  padding: 12px;
+  border-radius: 8px;
+  color: white;
+  font-family: inherit;
+}
+
+.primary-btn {
+  background: var(--lu-gradient);
+  border: none;
+  color: white;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.primary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(216, 27, 96, 0.3);
+}
+
+.delete-ex-btn {
+  background: rgba(255, 59, 48, 0.1);
+  color: #ff3b30;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: var(--transition);
+}
+
+.delete-ex-btn:hover {
+  background: #ff3b30;
+  color: white;
+}
+
 /* Day Selector */
 .day-selector {
   display: flex;
