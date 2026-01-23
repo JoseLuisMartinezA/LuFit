@@ -1,8 +1,8 @@
-# 💪 Rutina Gym - 4 Días (App Style)
+# ⚡ LuFit - Tu Rutina de Gym
 
-Una aplicación web minimalista y profesional para seguir tu rutina de gimnasio. Diseñada con una estética moderna, modo oscuro y persistencia de datos local.
+Una aplicación web minimalista y profesional para seguir tu rutina de gimnasio. Diseñada con la esencia de LuFit: energía, estilo y resultados.
 
-![Gym Routine Preview](https://raw.githubusercontent.com/JoseLuisMartinezA/RutinaGimnasio/main/public/vite.svg)
+![LuFit Logo](https://raw.githubusercontent.com/JoseLuisMartinezA/RutinaGimnasio/main/public/LuFit%20logo.png)
 
 ## ✨ Características
 - **Interfaz tipo App**: Navegación fluida entre los 4 días de entrenamiento.

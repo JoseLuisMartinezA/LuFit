@@ -1,21 +1,28 @@
 :root {
-  --bg-color: #050505;
-  --panel-color: #121214;
-  --panel-border: rgba(255, 255, 255, 0.08);
+  --bg-color: #08080a;
+  --panel-color: #121215;
+  --panel-border: rgba(255, 255, 255, 0.06);
   --text-primary: #ffffff;
-  --text-secondary: #a1a1aa;
-  --accent-1: #c084fc;
-  /* Purple - Day 1 */
-  --accent-2: #60a5fa;
-  /* Blue - Day 2 */
-  --accent-3: #4ade80;
-  /* Green - Day 3 */
-  --accent-4: #fb923c;
-  /* Orange - Day 4 */
-  --radius-lg: 20px;
-  --radius-md: 12px;
+  --text-secondary: #94a3b8;
+
+  /* LuFit Brand Palette */
+  --lu-pink: #d81b60;
+  --lu-orange: #ff8a65;
+  --lu-gradient: linear-gradient(135deg, #d81b60, #ff8a65);
+
+  --accent-1: #d81b60;
+  /* Pink */
+  --accent-2: #ff8a65;
+  /* Orange */
+  --accent-3: #c026d3;
+  /* Fuchsia */
+  --accent-4: #2563eb;
+  /* Blue */
+
+  --radius-lg: 24px;
+  --radius-md: 16px;
   --font-main: 'Outfit', sans-serif;
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * {
@@ -28,8 +35,8 @@ body {
   font-family: var(--font-main);
   background-color: var(--bg-color);
   background-image:
-    radial-gradient(at 0% 0%, rgba(192, 132, 252, 0.05) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(96, 165, 250, 0.05) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(216, 27, 96, 0.12) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(255, 138, 101, 0.12) 0px, transparent 50%);
   color: var(--text-primary);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -45,32 +52,50 @@ body {
 
 /* Header */
 .header {
-  padding: 40px 0 24px;
+  padding: 60px 0 40px;
   text-align: center;
-}
-
-.header-content h1 {
-  font-size: 2.5rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  margin-bottom: 4px;
 }
 
 .logo-area {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 16px;
+  margin-bottom: 12px;
 }
 
-.emoji {
-  font-size: 2.2rem;
+.main-logo {
+  height: 85px;
+  width: auto;
+  filter: drop-shadow(0 0 25px rgba(216, 27, 96, 0.4));
+  animation: float 6s ease-in-out infinite;
+}
+
+.brand-name {
+  height: 48px;
+  width: auto;
+  opacity: 0.95;
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-12px);
+  }
 }
 
 .subtitle {
   color: var(--text-secondary);
   font-size: 1.1rem;
   font-weight: 400;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 /* Summary Cards */
