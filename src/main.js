@@ -65,6 +65,8 @@ let longPressTimer = null;
 let isDragging = false;
 let scrollInterval = null;
 let lastPointerEvent = null;
+let dragStartPageY = 0;
+let dragInitialRect = null;
 
 // Database Operations
 async function dbBatch(requests) {
@@ -316,7 +318,10 @@ function handlePointerDown(e, id, index) {
 
   const card = e.currentTarget;
   dragStartY = e.clientY;
+  dragStartPageY = e.pageY;
+  dragInitialRect = card.getBoundingClientRect();
   dragStartIndex = index;
+  dragCurrentIndex = index;
   dragTarget = card;
 
   window.longPressTimer = setTimeout(() => {
@@ -341,22 +346,29 @@ function handlePointerMove(e) {
   e.preventDefault();
   lastPointerEvent = e;
 
-  const currentY = e.clientY;
-  const deltaY = currentY - dragStartY;
+  // Calculate delta based on page coordinates to stay sticky during scroll
+  const deltaPageY = e.pageY - dragStartPageY;
 
-  // Use translate3d for GPU acceleration and smoother motion
-  dragTarget.style.transform = `translate3d(0, ${deltaY}px, 0) scale(1.05)`;
+  // Use translate3d for friction-less move. 
+  // We keep it relative to its original position in the flow.
+  dragTarget.style.transform = `translate3d(0, ${deltaPageY}px, 0) scale(1.05)`;
+  dragTarget.style.zIndex = "1000";
 
   checkAutoScroll(e);
 
-  // Find potential new index
-  const cards = [...document.querySelectorAll('.exercise-card:not(.dragging)')];
+  // Find potential new index by checking which slot the finger is over
+  const container = document.querySelector('.exercise-list');
+  const cards = [...container.querySelectorAll('.exercise-card:not(.dragging)')];
+
   let newIndex = dragStartIndex;
+  const currentFingerY = e.clientY;
 
   cards.forEach((card, idx) => {
     const rect = card.getBoundingClientRect();
-    const cardCenter = rect.top + rect.height / 2;
-    if (currentY > cardCenter) {
+    const midPoint = rect.top + rect.height / 2;
+
+    // If we are below the midpoint of a card, our target index is after it
+    if (currentFingerY > midPoint) {
       newIndex = idx >= dragStartIndex ? idx + 1 : idx;
     }
   });
@@ -382,6 +394,7 @@ function checkAutoScroll(e) {
     if (!scrollInterval) {
       scrollInterval = setInterval(() => {
         window.scrollBy(0, speed);
+        // Force update of dragged item position and other items' offsets during scroll
         if (lastPointerEvent) handlePointerMove(lastPointerEvent);
       }, 16);
     }
