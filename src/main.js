@@ -55,7 +55,6 @@ let weeks = [];
 let currentWeekId = null;
 let currentDay = 1;
 let currentExercises = [];
-let isSyncing = false;
 
 // Database Operations
 async function dbQuery(sql, args = []) {
@@ -89,7 +88,6 @@ async function dbQuery(sql, args = []) {
 async function initApp() {
   updateSyncStatus(true);
 
-  // Tables are created via migration script, but let's ensure here too
   await dbQuery('CREATE TABLE IF NOT EXISTS weeks (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)');
   await dbQuery('CREATE TABLE IF NOT EXISTS exercises (id INTEGER PRIMARY KEY AUTOINCREMENT, week_id INTEGER, day_index INTEGER, name TEXT, sets TEXT, completed INTEGER DEFAULT 0, weight TEXT DEFAULT \'\')');
 
@@ -113,30 +111,18 @@ async function createWeek(name) {
   const res = await dbQuery("INSERT INTO weeks (name) VALUES (?)", [name]);
   const newId = res.results[0].response.result.last_insert_rowid;
 
-  // Seed initial exercises for this week
-  // Copy from previous week or from default
-  let baseExs = [];
-  if (currentWeekId) {
-    const prevExsRes = await dbQuery("SELECT day_index, name, sets FROM exercises WHERE week_id = ?", [currentWeekId]);
-    if (prevExsRes && prevExsRes.results[0].type === 'ok') {
-      baseExs = prevExsRes.results[0].response.result.rows.map(r => ({ day: r[0].value, name: r[1].value, sets: r[2].value }));
+  // Siempre sembrar con la rutina por defecto si es una semana nueva
+  for (const day of DEFAULT_ROUTINE) {
+    for (const ex of day.exs) {
+      await dbQuery("INSERT INTO exercises (week_id, day_index, name, sets) VALUES (?, ?, ?, ?)", [newId, day.day, ex.name, ex.sets]);
     }
-  } else {
-    DEFAULT_ROUTINE.forEach(day => {
-      day.exs.forEach(ex => {
-        baseExs.push({ day: day.day, name: ex.name, sets: ex.sets });
-      });
-    });
-  }
-
-  for (const ex of baseExs) {
-    await dbQuery("INSERT INTO exercises (week_id, day_index, name, sets) VALUES (?, ?, ?, ?)", [newId, ex.day, ex.name, ex.sets]);
   }
 
   weeks.push({ id: newId, name });
   currentWeekId = newId;
   await loadExercises();
   renderWeekSelector();
+  renderRoutine();
 }
 
 async function loadExercises() {
@@ -161,7 +147,6 @@ function renderWeekSelector() {
 
 async function toggleExercise(id, completed) {
   const newState = !completed;
-  // Optimistic
   const ex = currentExercises.find(e => e.id === id);
   if (ex) ex.completed = newState;
   renderRoutine();
@@ -181,17 +166,22 @@ async function updateWeight(id, weight) {
 }
 
 async function addExercise() {
-  const name = document.getElementById('new-ex-name').value;
-  const sets = document.getElementById('new-ex-sets').value;
+  const nameInput = document.getElementById('new-ex-name');
+  const setsInput = document.getElementById('new-ex-sets');
+  const name = nameInput.value.trim();
+  const sets = setsInput.value.trim();
+
   if (!name) return;
 
   updateSyncStatus(true);
   await dbQuery("INSERT INTO exercises (week_id, day_index, name, sets) VALUES (?, ?, ?, ?)", [currentWeekId, currentDay, name, sets]);
   await loadExercises();
   renderRoutine();
-  document.getElementById('add-exercise-ui').style.display = 'none';
-  document.getElementById('new-ex-name').value = '';
-  document.getElementById('new-ex-sets').value = '';
+
+  // Cerrar modal y limpiar
+  document.getElementById('add-exercise-modal').style.display = 'none';
+  nameInput.value = '';
+  setsInput.value = '';
   updateSyncStatus(false);
 }
 
@@ -206,8 +196,8 @@ async function deleteExercise(id) {
 
 function renderRoutine() {
   const container = document.getElementById('routine-content');
-  const colors = ["var(--lu-pink)", "var(--accent-2)", "var(--accent-3)", "var(--accent-4)"];
-  const color = colors[currentDay - 1];
+  const colors = ["var(--accent-1)", "var(--accent-2)", "var(--accent-3)", "var(--accent-4)"];
+  const color = colorForDay(currentDay);
 
   const html = `
     <div class="day-header">
@@ -216,7 +206,7 @@ function renderRoutine() {
           <span class="day-tag" style="background: ${color}20; color: ${color}">DÍA ${currentDay}</span>
           <h2>Día ${currentDay}</h2>
         </div>
-        <button class="secondary-btn" onclick="document.getElementById('add-exercise-ui').style.display = 'flex'">+ Add Ex</button>
+        <button class="secondary-btn" onclick="document.getElementById('add-exercise-modal').style.display = 'flex'">+ Add Ex</button>
       </div>
     </div>
     
@@ -236,13 +226,18 @@ function renderRoutine() {
             </div>
           </div>
           <div class="exercise-extra">
-             <input type="text" placeholder="Kg" value="${ex.weight}" onchange="window.updateWeight(${ex.id}, this.value)" onclick="event.stopPropagation()">
+             <input type="text" placeholder="Peso (kg)" value="${ex.weight}" onchange="window.updateWeight(${ex.id}, this.value)" onclick="event.stopPropagation()">
           </div>
         </div>
       `).join('')}
     </div>
   `;
   container.innerHTML = html;
+}
+
+function colorForDay(day) {
+  const colors = ["var(--accent-1)", "var(--accent-2)", "var(--accent-3)", "var(--accent-4)"];
+  return colors[day - 1] || "var(--lu-pink)";
 }
 
 function updateSyncStatus(syncing) {
@@ -253,8 +248,10 @@ function updateSyncStatus(syncing) {
 // Event Listeners
 document.getElementById('week-select').addEventListener('change', async (e) => {
   currentWeekId = parseInt(e.target.value);
+  updateSyncStatus(true);
   await loadExercises();
   renderRoutine();
+  updateSyncStatus(false);
 });
 
 document.getElementById('add-week-btn').addEventListener('click', async () => {
@@ -273,8 +270,10 @@ document.querySelectorAll('.day-tab').forEach(tab => {
     document.querySelectorAll('.day-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     currentDay = parseInt(tab.dataset.day);
+    updateSyncStatus(true);
     await loadExercises();
     renderRoutine();
+    updateSyncStatus(false);
   });
 });
 

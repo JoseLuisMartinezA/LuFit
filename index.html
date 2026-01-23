@@ -80,11 +80,26 @@
         <!-- Dynamically populated -->
       </section>
 
-      <!-- Add Exercise UI (Dynamic) -->
-      <div id="add-exercise-ui" class="add-exercise-card" style="display: none;">
-        <input type="text" id="new-ex-name" placeholder="Nombre del ejercicio">
-        <input type="text" id="new-ex-sets" placeholder="Sets (ej: 3 × 12)">
-        <button id="save-ex-btn" class="primary-btn">Añadir Ejercicio</button>
+      <!-- Modal para añadir ejercicio -->
+      <div id="add-exercise-modal" class="modal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Añadir Ejercicio</h3>
+            <button class="close-modal"
+              onclick="document.getElementById('add-exercise-modal').style.display='none'">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="input-group">
+              <label for="new-ex-name">Nombre</label>
+              <input type="text" id="new-ex-name" placeholder="Ej: Sentadilla">
+            </div>
+            <div class="input-group">
+              <label for="new-ex-sets">Series y Repes</label>
+              <input type="text" id="new-ex-sets" placeholder="Ej: 3 × 12">
+            </div>
+            <button id="save-ex-btn" class="primary-btn">Guardar Ejercicio</button>
+          </div>
+        </div>
       </div>
 
       <!-- Tips Section -->
