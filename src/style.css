@@ -429,6 +429,66 @@ input {
   font-size: 0.9rem;
 }
 
+.edit-ex-btn {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  border: 1px solid var(--panel-border);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.edit-ex-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.edit-ex-btn::before {
+  content: '✏️';
+  font-size: 0.9rem;
+}
+
+/* Dragging Styles */
+.exercise-card {
+  user-select: none;
+  touch-action: none;
+}
+
+.exercise-card.dragging {
+  position: relative;
+  z-index: 1000;
+  background: #1e1e22;
+  border-color: var(--lu-pink);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  opacity: 0.9;
+  transform: scale(1.02);
+  transition: transform 0.05s linear, box-shadow 0.2s ease;
+}
+
+body.is-dragging {
+  cursor: grabbing !important;
+  user-select: none;
+}
+
+body.is-dragging * {
+  cursor: grabbing !important;
+}
+
+.exercise-list {
+  position: relative;
+}
+
+.exercise-card:not(.dragging) {
+  transition: transform 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
 /* Day Selector */
 .day-selector {
   display: flex;

@@ -56,6 +56,13 @@ let currentWeekId = null;
 let currentDay = 1;
 let currentExercises = [];
 let dayTitles = {}; // { dayIndex: title }
+let editingExerciseId = null;
+let dragTarget = null;
+let dragStartY = 0;
+let dragStartIndex = -1;
+let dragCurrentIndex = -1;
+let longPressTimer = null;
+let isDragging = false;
 
 // Database Operations
 async function dbBatch(requests) {
@@ -98,7 +105,7 @@ async function initApp() {
 
   await dbBatch([
     { sql: 'CREATE TABLE IF NOT EXISTS weeks (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)' },
-    { sql: 'CREATE TABLE IF NOT EXISTS exercises (id INTEGER PRIMARY KEY AUTOINCREMENT, week_id INTEGER, day_index INTEGER, name TEXT, sets TEXT, completed INTEGER DEFAULT 0, weight TEXT DEFAULT \'\')' },
+    { sql: 'CREATE TABLE IF NOT EXISTS exercises (id INTEGER PRIMARY KEY AUTOINCREMENT, week_id INTEGER, day_index INTEGER, name TEXT, sets TEXT, completed INTEGER DEFAULT 0, weight TEXT DEFAULT \'\', order_index INTEGER DEFAULT 0)' },
     { sql: 'CREATE TABLE IF NOT EXISTS day_titles (week_id INTEGER, day_index INTEGER, title TEXT, PRIMARY KEY(week_id, day_index))' }
   ]);
 
@@ -144,8 +151,8 @@ async function checkAndSeedExercises() {
       for (const day of DEFAULT_ROUTINE) {
         for (const ex of day.exs) {
           inserts.push({
-            sql: "INSERT INTO exercises (week_id, day_index, name, sets) VALUES (?, ?, ?, ?)",
-            args: [currentWeekId, day.day, ex.name, ex.sets]
+            sql: "INSERT INTO exercises (week_id, day_index, name, sets, order_index) VALUES (?, ?, ?, ?, ?)",
+            args: [currentWeekId, day.day, ex.name, ex.sets, 0]
           });
         }
       }
@@ -172,8 +179,8 @@ async function createWeek(name) {
   for (const day of DEFAULT_ROUTINE) {
     for (const ex of day.exs) {
       inserts.push({
-        sql: "INSERT INTO exercises (week_id, day_index, name, sets) VALUES (?, ?, ?, ?)",
-        args: [newId, day.day, ex.name, ex.sets]
+        sql: "INSERT INTO exercises (week_id, day_index, name, sets, order_index) VALUES (?, ?, ?, ?, ?)",
+        args: [newId, day.day, ex.name, ex.sets, 0]
       });
     }
   }
@@ -200,7 +207,7 @@ async function loadDayTitles() {
 
 async function loadExercises() {
   if (!currentWeekId) return;
-  const res = await dbQuery("SELECT id, day_index, name, sets, completed, weight FROM exercises WHERE week_id = ? AND day_index = ?", [currentWeekId, currentDay]);
+  const res = await dbQuery("SELECT id, day_index, name, sets, completed, weight, order_index FROM exercises WHERE week_id = ? AND day_index = ? ORDER BY order_index ASC, id ASC", [currentWeekId, currentDay]);
   if (res && res.results[0].type === 'ok') {
     const rows = res.results[0].response.result.rows;
     currentExercises = rows.map(r => ({
@@ -209,7 +216,8 @@ async function loadExercises() {
       name: r[2].value,
       sets: r[3].value,
       completed: parseInt(r[4].value) === 1,
-      weight: r[5].value || ""
+      weight: r[5].value || "",
+      order_index: parseInt(r[6].value || "0")
     }));
   }
   renderRoutine();
@@ -253,7 +261,7 @@ async function updateWeight(id, weight) {
   updateSyncStatus(false);
 }
 
-async function addExercise() {
+async function saveExercise() {
   const nameInput = document.getElementById('new-ex-name');
   const setsInput = document.getElementById('new-ex-sets');
   const name = nameInput.value.trim();
@@ -262,12 +270,143 @@ async function addExercise() {
   if (!name) return;
 
   updateSyncStatus(true);
-  await dbQuery("INSERT INTO exercises (week_id, day_index, name, sets) VALUES (?, ?, ?, ?)", [currentWeekId, currentDay, name, sets]);
+  if (editingExerciseId) {
+    await dbQuery("UPDATE exercises SET name = ?, sets = ? WHERE id = ?", [name, sets, editingExerciseId]);
+  } else {
+    const orderIndex = currentExercises.length > 0 ? Math.max(...currentExercises.map(e => e.order_index)) + 1 : 0;
+    await dbQuery("INSERT INTO exercises (week_id, day_index, name, sets, order_index) VALUES (?, ?, ?, ?, ?)", [currentWeekId, currentDay, name, sets, orderIndex]);
+  }
   await loadExercises();
 
+  closeModal();
+  updateSyncStatus(false);
+}
+
+function openAddModal() {
+  editingExerciseId = null;
+  document.getElementById('modal-title').innerText = "Añadir Ejercicio";
+  document.getElementById('new-ex-name').value = '';
+  document.getElementById('new-ex-sets').value = '';
+  document.getElementById('add-exercise-modal').style.display = 'flex';
+}
+
+function openEditModal(id) {
+  const ex = currentExercises.find(e => e.id === id);
+  if (!ex) return;
+  editingExerciseId = id;
+  document.getElementById('modal-title').innerText = "Editar Ejercicio";
+  document.getElementById('new-ex-name').value = ex.name;
+  document.getElementById('new-ex-sets').value = ex.sets;
+  document.getElementById('add-exercise-modal').style.display = 'flex';
+}
+
+function closeModal() {
   document.getElementById('add-exercise-modal').style.display = 'none';
-  nameInput.value = '';
-  setsInput.value = '';
+  editingExerciseId = null;
+}
+
+// Reordering Logic
+function handlePointerDown(e, id, index) {
+  if (e.target.closest('button') || e.target.closest('input')) return;
+
+  const card = e.currentTarget;
+  dragStartY = e.clientY;
+  dragStartIndex = index;
+  dragTarget = card;
+
+  window.longPressTimer = setTimeout(() => {
+    startDrag(e);
+  }, 400); // 400ms for long press
+}
+
+function startDrag(e) {
+  isDragging = true;
+  dragTarget.classList.add('dragging');
+  document.body.classList.add('is-dragging');
+
+  // Create vibration feedback if available
+  if (navigator.vibrate) navigator.vibrate(50);
+
+  window.addEventListener('pointermove', handlePointerMove);
+  window.addEventListener('pointerup', handlePointerUp);
+}
+
+function handlePointerMove(e) {
+  if (!isDragging) return;
+  e.preventDefault();
+
+  const currentY = e.clientY;
+  const deltaY = currentY - dragStartY;
+  dragTarget.style.transform = `translateY(${deltaY}px)`;
+
+  // Find potential new index
+  const cards = [...document.querySelectorAll('.exercise-card:not(.dragging)')];
+  let newIndex = dragStartIndex;
+
+  cards.forEach((card, idx) => {
+    const rect = card.getBoundingClientRect();
+    const cardCenter = rect.top + rect.height / 2;
+    if (currentY > cardCenter) {
+      newIndex = idx >= dragStartIndex ? idx + 1 : idx;
+    }
+  });
+
+  if (newIndex !== dragCurrentIndex) {
+    dragCurrentIndex = newIndex;
+    updateCardsUI();
+  }
+}
+
+function updateCardsUI() {
+  const cards = [...document.querySelectorAll('.exercise-card:not(.dragging)')];
+  cards.forEach((card, idx) => {
+    let offset = 0;
+    if (dragCurrentIndex <= idx && idx < dragStartIndex) offset = dragTarget.offsetHeight + 12;
+    else if (dragStartIndex < idx && idx <= dragCurrentIndex) offset = -(dragTarget.offsetHeight + 12);
+    card.style.transform = `translateY(${offset}px)`;
+  });
+}
+
+async function handlePointerUp(e) {
+  clearTimeout(window.longPressTimer);
+  if (!isDragging) {
+    dragTarget = null;
+    return;
+  }
+
+  isDragging = false;
+  document.body.classList.remove('is-dragging');
+  dragTarget.classList.remove('dragging');
+  dragTarget.style.transform = '';
+
+  window.removeEventListener('pointermove', handlePointerMove);
+  window.removeEventListener('pointerup', handlePointerUp);
+
+  if (dragCurrentIndex !== -1 && dragCurrentIndex !== dragStartIndex) {
+    // Reorder array
+    const movedItem = currentExercises.splice(dragStartIndex, 1)[0];
+    currentExercises.splice(dragCurrentIndex, 0, movedItem);
+
+    // Update order_index
+    currentExercises.forEach((ex, idx) => ex.order_index = idx);
+
+    renderRoutine();
+    await saveNewOrder();
+  } else {
+    renderRoutine();
+  }
+
+  dragTarget = null;
+  dragCurrentIndex = -1;
+}
+
+async function saveNewOrder() {
+  updateSyncStatus(true);
+  const updates = currentExercises.map((ex, idx) => ({
+    sql: "UPDATE exercises SET order_index = ? WHERE id = ?",
+    args: [idx, ex.id]
+  }));
+  await dbBatch(updates);
   updateSyncStatus(false);
 }
 
@@ -298,15 +437,19 @@ function renderRoutine() {
     </div>
     
     <div class="exercise-list">
-      ${currentExercises.map(ex => `
-        <div class="exercise-card ${ex.completed ? 'completed' : ''}" style="border-left: 4px solid ${ex.completed ? 'transparent' : color}">
+      ${currentExercises.map((ex, idx) => `
+        <div class="exercise-card ${ex.completed ? 'completed' : ''}" 
+             style="border-left: 4px solid ${ex.completed ? 'transparent' : color}"
+             onpointerdown="window.handlePointerDown(event, ${ex.id}, ${idx})"
+             onpointerup="clearTimeout(window.longPressTimer)">
           <div class="exercise-main" onclick="window.toggleExercise(${ex.id}, ${ex.completed})">
             <div class="exercise-info">
               <span class="exercise-name">${ex.name}</span>
               <span class="exercise-sets">${ex.sets}</span>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
-              <button class="delete-ex-btn" onclick="event.stopPropagation(); window.deleteExercise(${ex.id})"></button>
+              <button class="edit-ex-btn" title="Editar" onclick="event.stopPropagation(); window.openEditModal(${ex.id})"></button>
+              <button class="delete-ex-btn" title="Borrar" onclick="event.stopPropagation(); window.deleteExercise(${ex.id})"></button>
               <div class="checkbox-wrapper">
                 <span class="checkmark" style="color: ${color}"></span>
               </div>
@@ -320,7 +463,7 @@ function renderRoutine() {
       ${currentExercises.length === 0 ? '<p style="text-align:center; padding: 20px; color: var(--text-secondary)">No hay ejercicios para este día.</p>' : ''}
     </div>
 
-    <button class="add-ex-bottom-btn" onclick="document.getElementById('add-exercise-modal').style.display = 'flex'">
+    <button class="add-ex-bottom-btn" onclick="window.openAddModal()">
       <span>＋</span> Añadir Ejercicio
     </button>
   `;
@@ -397,7 +540,7 @@ if (deleteWeekBtn) {
 }
 
 const saveExBtn = document.getElementById('save-ex-btn');
-if (saveExBtn) saveExBtn.addEventListener('click', addExercise);
+if (saveExBtn) saveExBtn.addEventListener('click', saveExercise);
 
 document.querySelectorAll('.day-tab').forEach(tab => {
   tab.addEventListener('click', async () => {
@@ -415,6 +558,10 @@ window.updateWeight = updateWeight;
 window.deleteExercise = deleteExercise;
 window.deleteWeek = deleteWeek;
 window.editDayTitle = editDayTitle;
+window.openAddModal = openAddModal;
+window.openEditModal = openEditModal;
+window.closeModal = closeModal;
+window.handlePointerDown = handlePointerDown;
 
 // Init
 initApp();
