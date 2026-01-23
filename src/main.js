@@ -52,28 +52,21 @@ const routineData = [
 
 // State
 let currentDay = 1;
-let exerciseProgress = {}; // Stores { completed: bool, weight: string }
+let exerciseProgress = {}; // { key: { completed: bool, weight: string } }
 let isSyncing = false;
-
-function getUserId() {
-  let id = localStorage.getItem('lufit_user_id');
-  if (!id) {
-    id = 'user_' + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem('lufit_user_id', id);
-  }
-  return id;
-}
-
-const USER_ID = getUserId();
 
 // Database Operations
 async function dbQuery(sql, args = []) {
   if (!DB_URL || !DB_TOKEN) {
-    console.error("Faltan DB_URL o DB_TOKEN en el archivo .env.local");
+    console.error("Faltan DB_URL o DB_TOKEN");
     return null;
   }
+
+  // Clean URL if it has libsql://
+  const cleanUrl = DB_URL.replace('libsql://', 'https://') + "/v2/pipeline";
+
   try {
-    const response = await fetch(DB_URL, {
+    const response = await fetch(cleanUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${DB_TOKEN}`,
@@ -82,19 +75,22 @@ async function dbQuery(sql, args = []) {
       body: JSON.stringify({
         requests: [
           {
-            type: 'execute', stmt: {
-              sql, args: args.map(a =>
-                typeof a === 'boolean' ? { value: a ? 1 : 0 } :
-                  typeof a === 'number' ? { value: a } :
-                    a === null ? { value: null } :
-                      { value: a.toString() }
-              )
+            type: 'execute',
+            stmt: {
+              sql,
+              args: args.map(a => {
+                if (typeof a === 'boolean') return { type: 'integer', value: a ? 1 : 0 };
+                if (typeof a === 'number') return { type: 'integer', value: a };
+                if (a === null) return { type: 'null' };
+                return { type: 'text', value: a.toString() };
+              })
             }
           }
         ]
       })
     });
-    return await response.json();
+    const data = await response.json();
+    return data;
   } catch (error) {
     console.error("DB Error:", error);
     return null;
@@ -104,22 +100,19 @@ async function dbQuery(sql, args = []) {
 async function loadProgress() {
   updateSyncStatus(true);
 
-  // Create table if not exists AND alter it to add weight column if it doesn't exist
+  // Simplificamos la tabla quitando user_id
   await dbQuery(`CREATE TABLE IF NOT EXISTS progress (
-    user_id TEXT, 
-    exercise_key TEXT, 
-    completed INTEGER, 
-    weight TEXT,
-    PRIMARY KEY (user_id, exercise_key)
+    exercise_key TEXT PRIMARY KEY, 
+    completed INTEGER DEFAULT 0, 
+    weight TEXT DEFAULT ''
   )`);
 
-  const data = await dbQuery("SELECT exercise_key, completed, weight FROM progress WHERE user_id = ?", [USER_ID]);
+  const data = await dbQuery("SELECT exercise_key, completed, weight FROM progress");
 
-  if (data && data.results && data.results[0].response.result) {
+  if (data && data.results && data.results[0].type === 'ok') {
     const rows = data.results[0].response.result.rows;
     exerciseProgress = {};
     rows.forEach(row => {
-      // row[0] = key, row[1] = completed, row[2] = weight
       exerciseProgress[row[0].value] = {
         completed: row[1].value === 1,
         weight: row[2].value || ""
@@ -135,14 +128,13 @@ async function toggleExercise(day, exerciseName) {
   const current = exerciseProgress[key] || { completed: false, weight: "" };
   const newState = !current.completed;
 
-  // Optimistic UI update
   exerciseProgress[key] = { ...current, completed: newState };
   renderRoutine();
 
   updateSyncStatus(true);
   await dbQuery(
-    "INSERT INTO progress (user_id, exercise_key, completed, weight) VALUES (?, ?, ?, ?) ON CONFLICT(user_id, exercise_key) DO UPDATE SET completed = excluded.completed",
-    [USER_ID, key, newState ? 1 : 0, current.weight]
+    "INSERT INTO progress (exercise_key, completed, weight) VALUES (?, ?, ?) ON CONFLICT(exercise_key) DO UPDATE SET completed = excluded.completed",
+    [key, newState, current.weight]
   );
   updateSyncStatus(false);
 }
@@ -155,8 +147,8 @@ async function updateWeight(day, exerciseName, weight) {
 
   updateSyncStatus(true);
   await dbQuery(
-    "INSERT INTO progress (user_id, exercise_key, completed, weight) VALUES (?, ?, ?, ?) ON CONFLICT(user_id, exercise_key) DO UPDATE SET weight = excluded.weight",
-    [USER_ID, key, current.completed ? 1 : 0, weight]
+    "INSERT INTO progress (exercise_key, completed, weight) VALUES (?, ?, ?) ON CONFLICT(exercise_key) DO UPDATE SET weight = excluded.weight",
+    [key, current.completed, weight]
   );
   updateSyncStatus(false);
 }
@@ -165,7 +157,7 @@ function updateSyncStatus(syncing) {
   isSyncing = syncing;
   const footerStatus = document.getElementById('sync-status');
   if (footerStatus) {
-    footerStatus.innerHTML = syncing ? "🔄 Sincronizando..." : "✨ En la nube";
+    footerStatus.innerHTML = syncing ? "🔄 Sincronizando..." : "✨ LuFit Cloud Activo";
   }
 }
 
@@ -220,7 +212,7 @@ function renderRoutine() {
 }
 
 window.resetDay = async (day) => {
-  if (!confirm("¿Seguro que quieres reiniciar el progreso de este día?")) return;
+  if (!confirm("¿Reiniciar el progreso de este día?")) return;
 
   const dayExercises = routineData.find(d => d.day === day).exercises;
   updateSyncStatus(true);
@@ -228,7 +220,7 @@ window.resetDay = async (day) => {
   for (const ex of dayExercises) {
     const key = `${day}-${ex.name}`;
     exerciseProgress[key] = { completed: false, weight: "" };
-    await dbQuery("DELETE FROM progress WHERE user_id = ? AND exercise_key = ?", [USER_ID, key]);
+    await dbQuery("DELETE FROM progress WHERE exercise_key = ?", [key]);
   }
 
   updateSyncStatus(false);
@@ -252,7 +244,7 @@ const footer = document.querySelector('.footer');
 if (footer) {
   footer.innerHTML = `
     <p id="sync-status">✨ Cargando LuFit...</p>
-    <p style="font-size: 0.7rem; margin-top: 8px; opacity: 0.5;">ID de Sesión: ${USER_ID}</p>
+    <p style="font-size: 0.7rem; margin-top: 8px; opacity: 0.5;">LuFit Cloud Connect</p>
   `;
 }
 
