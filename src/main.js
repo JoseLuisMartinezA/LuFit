@@ -63,6 +63,8 @@ let dragStartIndex = -1;
 let dragCurrentIndex = -1;
 let longPressTimer = null;
 let isDragging = false;
+let scrollInterval = null;
+let lastPointerEvent = null;
 
 // Database Operations
 async function dbBatch(requests) {
@@ -337,10 +339,15 @@ function startDrag(e) {
 function handlePointerMove(e) {
   if (!isDragging) return;
   e.preventDefault();
+  lastPointerEvent = e;
 
   const currentY = e.clientY;
   const deltaY = currentY - dragStartY;
-  dragTarget.style.transform = `translateY(${deltaY}px)`;
+
+  // Use translate3d for GPU acceleration and smoother motion
+  dragTarget.style.transform = `translate3d(0, ${deltaY}px, 0) scale(1.05)`;
+
+  checkAutoScroll(e);
 
   // Find potential new index
   const cards = [...document.querySelectorAll('.exercise-card:not(.dragging)')];
@@ -360,13 +367,45 @@ function handlePointerMove(e) {
   }
 }
 
+function checkAutoScroll(e) {
+  const threshold = 100; // Pixels from top/bottom to start scrolling
+  const speed = 15;
+
+  if (e.clientY < threshold) {
+    if (!scrollInterval) {
+      scrollInterval = setInterval(() => {
+        window.scrollBy(0, -speed);
+        if (lastPointerEvent) handlePointerMove(lastPointerEvent);
+      }, 16);
+    }
+  } else if (e.clientY > window.innerHeight - threshold) {
+    if (!scrollInterval) {
+      scrollInterval = setInterval(() => {
+        window.scrollBy(0, speed);
+        if (lastPointerEvent) handlePointerMove(lastPointerEvent);
+      }, 16);
+    }
+  } else {
+    stopAutoScroll();
+  }
+}
+
+function stopAutoScroll() {
+  if (scrollInterval) {
+    clearInterval(scrollInterval);
+    scrollInterval = null;
+  }
+}
+
 function updateCardsUI() {
   const cards = [...document.querySelectorAll('.exercise-card:not(.dragging)')];
   cards.forEach((card, idx) => {
     let offset = 0;
+    // Apply a slightly more elastic offset
     if (dragCurrentIndex <= idx && idx < dragStartIndex) offset = dragTarget.offsetHeight + 12;
     else if (dragStartIndex < idx && idx <= dragCurrentIndex) offset = -(dragTarget.offsetHeight + 12);
-    card.style.transform = `translateY(${offset}px)`;
+
+    card.style.transform = `translate3d(0, ${offset}px, 0)`;
   });
 }
 
@@ -378,6 +417,8 @@ async function handlePointerUp(e) {
   }
 
   isDragging = false;
+  stopAutoScroll();
+  lastPointerEvent = null;
   document.body.classList.remove('is-dragging');
   dragTarget.classList.remove('dragging');
   dragTarget.style.transform = '';
