@@ -57,39 +57,48 @@ let currentDay = 1;
 let currentExercises = [];
 
 // Database Operations
-async function dbQuery(sql, args = []) {
+async function dbBatch(requests) {
   if (!DB_URL || !DB_TOKEN) return null;
   const cleanUrl = DB_URL.replace('libsql://', 'https://') + "/v2/pipeline";
+
+  const formattedRequests = requests.map(req => ({
+    type: 'execute',
+    stmt: {
+      sql: req.sql,
+      args: (req.args || []).map(a => {
+        if (typeof a === 'boolean') return { type: 'integer', value: a ? "1" : "0" };
+        if (typeof a === 'number') return { type: 'integer', value: a.toString() };
+        if (a === null) return { type: 'null' };
+        return { type: 'text', value: a.toString() };
+      })
+    }
+  }));
+
   try {
     const response = await fetch(cleanUrl, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${DB_TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        requests: [{
-          type: 'execute',
-          stmt: {
-            sql,
-            args: args.map(a => {
-              if (typeof a === 'boolean') return { type: 'integer', value: a ? 1 : 0 };
-              if (typeof a === 'number') return { type: 'integer', value: a };
-              return { type: 'text', value: a.toString() };
-            })
-          }
-        }]
-      })
+      body: JSON.stringify({ requests: formattedRequests })
     });
     return await response.json();
   } catch (error) {
-    console.error("DB Error:", error);
+    console.error("DB Batch Error:", error);
     return null;
   }
+}
+
+async function dbQuery(sql, args = []) {
+  const res = await dbBatch([{ sql, args }]);
+  return res;
 }
 
 async function initApp() {
   updateSyncStatus(true);
 
-  await dbQuery('CREATE TABLE IF NOT EXISTS weeks (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)');
-  await dbQuery('CREATE TABLE IF NOT EXISTS exercises (id INTEGER PRIMARY KEY AUTOINCREMENT, week_id INTEGER, day_index INTEGER, name TEXT, sets TEXT, completed INTEGER DEFAULT 0, weight TEXT DEFAULT \'\')');
+  await dbBatch([
+    { sql: 'CREATE TABLE IF NOT EXISTS weeks (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)' },
+    { sql: 'CREATE TABLE IF NOT EXISTS exercises (id INTEGER PRIMARY KEY AUTOINCREMENT, week_id INTEGER, day_index INTEGER, name TEXT, sets TEXT, completed INTEGER DEFAULT 0, weight TEXT DEFAULT \'\')' }
+  ]);
 
   const weeksRes = await dbQuery("SELECT id, name FROM weeks ORDER BY id ASC");
   if (weeksRes && weeksRes.results[0].type === 'ok') {
@@ -100,6 +109,7 @@ async function initApp() {
     await createWeek("Semana 1");
   } else {
     currentWeekId = weeks[weeks.length - 1].id;
+    await checkAndSeedExercises();
     await loadExercises();
   }
 
@@ -107,16 +117,41 @@ async function initApp() {
   updateSyncStatus(false);
 }
 
-async function createWeek(name) {
-  const res = await dbQuery("INSERT INTO weeks (name) VALUES (?)", [name]);
-  const newId = res.results[0].response.result.last_insert_rowid;
-
-  // Siempre sembrar con la rutina por defecto si es una semana nueva
-  for (const day of DEFAULT_ROUTINE) {
-    for (const ex of day.exs) {
-      await dbQuery("INSERT INTO exercises (week_id, day_index, name, sets) VALUES (?, ?, ?, ?)", [newId, day.day, ex.name, ex.sets]);
+async function checkAndSeedExercises() {
+  const res = await dbQuery("SELECT COUNT(*) FROM exercises WHERE week_id = ?", [currentWeekId]);
+  if (res && res.results[0].type === 'ok') {
+    const count = parseInt(res.results[0].response.result.rows[0][0].value);
+    if (count === 0) {
+      const inserts = [];
+      for (const day of DEFAULT_ROUTINE) {
+        for (const ex of day.exs) {
+          inserts.push({
+            sql: "INSERT INTO exercises (week_id, day_index, name, sets) VALUES (?, ?, ?, ?)",
+            args: [currentWeekId, day.day, ex.name, ex.sets]
+          });
+        }
+      }
+      await dbBatch(inserts);
     }
   }
+}
+
+async function createWeek(name) {
+  const res = await dbQuery("INSERT INTO weeks (name) VALUES (?)", [name]);
+  if (!res || res.results[0].type !== 'ok') return;
+
+  const newId = parseInt(res.results[0].response.result.last_insert_rowid);
+
+  const inserts = [];
+  for (const day of DEFAULT_ROUTINE) {
+    for (const ex of day.exs) {
+      inserts.push({
+        sql: "INSERT INTO exercises (week_id, day_index, name, sets) VALUES (?, ?, ?, ?)",
+        args: [newId, day.day, ex.name, ex.sets]
+      });
+    }
+  }
+  await dbBatch(inserts);
 
   weeks.push({ id: newId, name });
   currentWeekId = newId;
@@ -129,20 +164,23 @@ async function loadExercises() {
   if (!currentWeekId) return;
   const res = await dbQuery("SELECT id, day_index, name, sets, completed, weight FROM exercises WHERE week_id = ? AND day_index = ?", [currentWeekId, currentDay]);
   if (res && res.results[0].type === 'ok') {
-    currentExercises = res.results[0].response.result.rows.map(r => ({
-      id: r[0].value,
-      day: r[1].value,
+    const rows = res.results[0].response.result.rows;
+    currentExercises = rows.map(r => ({
+      id: parseInt(r[0].value),
+      day: parseInt(r[1].value),
       name: r[2].value,
       sets: r[3].value,
-      completed: r[4].value === 1,
+      completed: parseInt(r[4].value) === 1,
       weight: r[5].value || ""
     }));
   }
+  renderRoutine();
 }
 
 function renderWeekSelector() {
   const select = document.getElementById('week-select');
-  select.innerHTML = weeks.map(w => `<option value="${w.id}" ${w.id === currentWeekId ? 'selected' : ''}>${w.name}</option>`).join('');
+  if (!select) return;
+  select.innerHTML = weeks.map(w => `<option value="${w.id}" ${w.id == currentWeekId ? 'selected' : ''}>${w.name}</option>`).join('');
 }
 
 async function toggleExercise(id, completed) {
@@ -176,9 +214,7 @@ async function addExercise() {
   updateSyncStatus(true);
   await dbQuery("INSERT INTO exercises (week_id, day_index, name, sets) VALUES (?, ?, ?, ?)", [currentWeekId, currentDay, name, sets]);
   await loadExercises();
-  renderRoutine();
 
-  // Cerrar modal y limpiar
   document.getElementById('add-exercise-modal').style.display = 'none';
   nameInput.value = '';
   setsInput.value = '';
@@ -190,13 +226,13 @@ async function deleteExercise(id) {
   updateSyncStatus(true);
   await dbQuery("DELETE FROM exercises WHERE id = ?", [id]);
   await loadExercises();
-  renderRoutine();
   updateSyncStatus(false);
 }
 
 function renderRoutine() {
   const container = document.getElementById('routine-content');
-  const colors = ["var(--accent-1)", "var(--accent-2)", "var(--accent-3)", "var(--accent-4)"];
+  if (!container) return;
+
   const color = colorForDay(currentDay);
 
   const html = `
@@ -230,6 +266,7 @@ function renderRoutine() {
           </div>
         </div>
       `).join('')}
+      ${currentExercises.length === 0 ? '<p style="text-align:center; padding: 20px; color: var(--text-secondary)">No hay ejercicios para este día.</p>' : ''}
     </div>
   `;
   container.innerHTML = html;
@@ -246,24 +283,30 @@ function updateSyncStatus(syncing) {
 }
 
 // Event Listeners
-document.getElementById('week-select').addEventListener('change', async (e) => {
-  currentWeekId = parseInt(e.target.value);
-  updateSyncStatus(true);
-  await loadExercises();
-  renderRoutine();
-  updateSyncStatus(false);
-});
-
-document.getElementById('add-week-btn').addEventListener('click', async () => {
-  const name = prompt("Nombre de la nueva semana (ej: Semana 2)");
-  if (name) {
+const weekSelect = document.getElementById('week-select');
+if (weekSelect) {
+  weekSelect.addEventListener('change', async (e) => {
+    currentWeekId = parseInt(e.target.value);
     updateSyncStatus(true);
-    await createWeek(name);
+    await loadExercises();
     updateSyncStatus(false);
-  }
-});
+  });
+}
 
-document.getElementById('save-ex-btn').addEventListener('click', addExercise);
+const addWeekBtn = document.getElementById('add-week-btn');
+if (addWeekBtn) {
+  addWeekBtn.addEventListener('click', async () => {
+    const name = prompt("Nombre de la nueva semana (ej: Semana 2)");
+    if (name) {
+      updateSyncStatus(true);
+      await createWeek(name);
+      updateSyncStatus(false);
+    }
+  });
+}
+
+const saveExBtn = document.getElementById('save-ex-btn');
+if (saveExBtn) saveExBtn.addEventListener('click', addExercise);
 
 document.querySelectorAll('.day-tab').forEach(tab => {
   tab.addEventListener('click', async () => {
@@ -272,7 +315,6 @@ document.querySelectorAll('.day-tab').forEach(tab => {
     currentDay = parseInt(tab.dataset.day);
     updateSyncStatus(true);
     await loadExercises();
-    renderRoutine();
     updateSyncStatus(false);
   });
 });
