@@ -109,6 +109,9 @@ async function initApp() {
     { sql: 'CREATE TABLE IF NOT EXISTS day_titles (week_id INTEGER, day_index INTEGER, title TEXT, PRIMARY KEY(week_id, day_index))' }
   ]);
 
+  // Migration: Add order_index if it doesn't exist (it will fail silently if it does)
+  await dbQuery("ALTER TABLE exercises ADD COLUMN order_index INTEGER DEFAULT 0").catch(() => { });
+
   const weeksRes = await dbQuery("SELECT id, name FROM weeks ORDER BY id ASC");
   if (weeksRes && weeksRes.results[0].type === 'ok') {
     weeks = weeksRes.results[0].response.result.rows.map(r => ({ id: r[0].value, name: r[1].value }));
