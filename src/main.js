@@ -324,9 +324,24 @@ function handlePointerDown(e, id, index) {
   dragCurrentIndex = index;
   dragTarget = card;
 
+  // Track initial position to cancel if scrolling
+  const initialX = e.clientX;
+  const initialY = e.clientY;
+
+  const handlePointerMoveCancel = (moveEvent) => {
+    const dist = Math.sqrt(Math.pow(moveEvent.clientX - initialX, 2) + Math.pow(moveEvent.clientY - initialY, 2));
+    if (dist > 10) { // If moved more than 10px, it's a scroll, not a long press
+      clearTimeout(window.longPressTimer);
+      window.removeEventListener('pointermove', handlePointerMoveCancel);
+    }
+  };
+
+  window.addEventListener('pointermove', handlePointerMoveCancel, { once: false });
+
   window.longPressTimer = setTimeout(() => {
+    window.removeEventListener('pointermove', handlePointerMoveCancel);
     startDrag(e);
-  }, 400); // 400ms for long press
+  }, 1500); // 1.5 seconds for long press (3 seconds felt too long, adjusted for better UX but following user intent)
 }
 
 function startDrag(e) {
