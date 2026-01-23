@@ -152,61 +152,79 @@ input {
 /* Week Manager */
 .week-manager {
   display: flex;
+  flex-direction: column;
   gap: 12px;
-  margin-bottom: 20px;
-  justify-content: center;
-  padding: 0 10px;
+  margin-bottom: 32px;
+  padding: 0 4px;
 }
 
 .week-select {
   background: var(--panel-color);
   border: 1px solid var(--panel-border);
   color: white;
-  padding: 12px 16px;
-  border-radius: 12px;
+  padding: 14px 20px;
+  border-radius: 14px;
   font-family: inherit;
-  flex: 1;
-  max-width: 180px;
+  font-weight: 600;
+  width: 100%;
   outline: none;
   cursor: pointer;
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: calc(100% - 12px) center;
+  background-position: calc(100% - 16px) center;
+  transition: var(--transition);
+}
+
+.week-select:focus {
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.05);
+}
+
+.week-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.secondary-btn,
+.danger-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: var(--transition);
 }
 
 .secondary-btn {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--panel-border);
   color: white;
-  padding: 12px 16px;
-  border-radius: 12px;
-  cursor: pointer;
-  font-family: inherit;
-  font-weight: 500;
-  transition: var(--transition);
 }
 
 .secondary-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
 }
 
 .danger-btn {
-  background: rgba(255, 59, 48, 0.1);
-  border: 1px solid rgba(255, 59, 48, 0.2);
-  color: #ff4d4d;
-  padding: 12px 16px;
-  border-radius: 12px;
-  cursor: pointer;
-  font-family: inherit;
-  font-weight: 500;
-  transition: var(--transition);
+  background: rgba(255, 59, 48, 0.08);
+  border: 1px solid rgba(255, 59, 48, 0.15);
+  color: #ff5252;
 }
 
 .danger-btn:hover {
   background: #ff3b30;
   color: white;
   border-color: #ff3b30;
+  transform: translateY(-2px);
 }
 
 /* Modal Stylings */
