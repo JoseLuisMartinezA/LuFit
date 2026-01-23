@@ -1,0 +1,364 @@
+:root {
+  --bg-color: #050505;
+  --panel-color: #121214;
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa;
+  --accent-1: #c084fc;
+  /* Purple - Day 1 */
+  --accent-2: #60a5fa;
+  /* Blue - Day 2 */
+  --accent-3: #4ade80;
+  /* Green - Day 3 */
+  --accent-4: #fb923c;
+  /* Orange - Day 4 */
+  --radius-lg: 20px;
+  --radius-md: 12px;
+  --font-main: 'Outfit', sans-serif;
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-main);
+  background-color: var(--bg-color);
+  background-image:
+    radial-gradient(at 0% 0%, rgba(192, 132, 252, 0.05) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(96, 165, 250, 0.05) 0px, transparent 50%);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 40px;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Header */
+.header {
+  padding: 40px 0 24px;
+  text-align: center;
+}
+
+.header-content h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.logo-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.emoji {
+  font-size: 2.2rem;
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  font-weight: 400;
+}
+
+/* Summary Cards */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.summary-card {
+  background: var(--panel-color);
+  border: 1px solid var(--panel-border);
+  padding: 16px 12px;
+  border-radius: var(--radius-md);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: var(--transition);
+}
+
+.summary-card:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.summary-card .icon {
+  font-size: 1.2rem;
+}
+
+.summary-card .info label {
+  display: block;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.summary-card .info strong {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* Day Selector */
+.day-selector {
+  display: flex;
+  background: var(--panel-color);
+  padding: 6px;
+  border-radius: 100px;
+  border: 1px solid var(--panel-border);
+  margin-bottom: 32px;
+  position: sticky;
+  top: 20px;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.day-tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 10px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 100px;
+  transition: var(--transition);
+}
+
+.day-tab.active {
+  color: white;
+}
+
+.day-tab:nth-child(1).active {
+  background: var(--accent-1);
+  box-shadow: 0 4px 12px rgba(192, 132, 252, 0.3);
+}
+
+.day-tab:nth-child(2).active {
+  background: var(--accent-2);
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
+}
+
+.day-tab:nth-child(3).active {
+  background: var(--accent-3);
+  box-shadow: 0 4px 12px rgba(74, 222, 128, 0.3);
+}
+
+.day-tab:nth-child(4).active {
+  background: var(--accent-4);
+  box-shadow: 0 4px 12px rgba(251, 146, 60, 0.3);
+}
+
+/* Routine Viewer */
+.routine-viewer {
+  min-height: 400px;
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.day-header {
+  margin-bottom: 24px;
+}
+
+.day-header h2 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.day-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 100px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+/* Exercise Cards */
+.exercise-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.exercise-card {
+  background: var(--panel-color);
+  border: 1px solid var(--panel-border);
+  padding: 20px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.exercise-card:hover {
+  background: #1a1a1d;
+}
+
+.exercise-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.exercise-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.exercise-sets {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+/* Custom Checkbox */
+.checkbox-wrapper {
+  position: relative;
+  width: 28px;
+  height: 28px;
+}
+
+.exercise-card input[type="checkbox"] {
+  display: none;
+}
+
+.checkmark {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  transition: var(--transition);
+  position: relative;
+}
+
+.exercise-card.completed {
+  border-color: rgba(255, 255, 255, 0.1);
+  opacity: 0.6;
+}
+
+.exercise-card.completed .exercise-name {
+  text-decoration: line-through;
+}
+
+.exercise-card.completed .checkmark {
+  background: currentColor;
+  border-color: transparent;
+}
+
+.exercise-card.completed .checkmark::after {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: black;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+/* Tips Section */
+.tips-section {
+  margin-top: 48px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0) 100%);
+  border: 1px solid var(--panel-border);
+  padding: 32px;
+  border-radius: var(--radius-lg);
+}
+
+.tips-section h2 {
+  font-size: 1.4rem;
+  margin-bottom: 24px;
+}
+
+.tips-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.tips-list li {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.tip-icon {
+  font-size: 1.2rem;
+  background: rgba(255, 255, 255, 0.05);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.tips-list p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.tips-list strong {
+  color: white;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  margin-top: 60px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  padding: 20px;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .header-content h1 {
+    font-size: 2rem;
+  }
+
+  .summary-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .day-tab {
+    padding: 8px 4px;
+    font-size: 0.9rem;
+  }
+}
