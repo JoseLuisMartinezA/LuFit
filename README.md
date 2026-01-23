@@ -2,7 +2,7 @@
 
 Una aplicación web minimalista y profesional para seguir tu rutina de gimnasio. Diseñada con la esencia de LuFit: energía, estilo y resultados.
 
-![LuFit Logo](https://raw.githubusercontent.com/JoseLuisMartinezA/RutinaGimnasio/main/public/LuFit%20logo.png)
+![LuFit App Icon](https://raw.githubusercontent.com/JoseLuisMartinezA/RutinaGimnasio/main/public/app-icon.png)
 
 ## ✨ Características
 - **Interfaz tipo App**: Navegación fluida entre los 4 días de entrenamiento.
