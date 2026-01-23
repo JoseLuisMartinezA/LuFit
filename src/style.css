@@ -227,6 +227,21 @@ input {
   transform: translateY(-2px);
 }
 
+.edit-title-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 4px;
+  opacity: 0.6;
+  transition: var(--transition);
+}
+
+.edit-title-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
 /* Modal Stylings */
 .modal {
   display: none;

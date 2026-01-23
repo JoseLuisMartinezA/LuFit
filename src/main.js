@@ -55,6 +55,7 @@ let weeks = [];
 let currentWeekId = null;
 let currentDay = 1;
 let currentExercises = [];
+let dayTitles = {}; // { dayIndex: title }
 
 // Database Operations
 async function dbBatch(requests) {
@@ -97,7 +98,8 @@ async function initApp() {
 
   await dbBatch([
     { sql: 'CREATE TABLE IF NOT EXISTS weeks (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)' },
-    { sql: 'CREATE TABLE IF NOT EXISTS exercises (id INTEGER PRIMARY KEY AUTOINCREMENT, week_id INTEGER, day_index INTEGER, name TEXT, sets TEXT, completed INTEGER DEFAULT 0, weight TEXT DEFAULT \'\')' }
+    { sql: 'CREATE TABLE IF NOT EXISTS exercises (id INTEGER PRIMARY KEY AUTOINCREMENT, week_id INTEGER, day_index INTEGER, name TEXT, sets TEXT, completed INTEGER DEFAULT 0, weight TEXT DEFAULT \'\')' },
+    { sql: 'CREATE TABLE IF NOT EXISTS day_titles (week_id INTEGER, day_index INTEGER, title TEXT, PRIMARY KEY(week_id, day_index))' }
   ]);
 
   const weeksRes = await dbQuery("SELECT id, name FROM weeks ORDER BY id ASC");
@@ -109,12 +111,28 @@ async function initApp() {
     await createWeek("Semana 1");
   } else {
     currentWeekId = weeks[weeks.length - 1].id;
+    await checkAndSeedDayTitles();
     await checkAndSeedExercises();
+    await loadDayTitles();
     await loadExercises();
   }
 
   renderWeekSelector();
   updateSyncStatus(false);
+}
+
+async function checkAndSeedDayTitles() {
+  const res = await dbQuery("SELECT COUNT(*) FROM day_titles WHERE week_id = ?", [currentWeekId]);
+  if (res && res.results[0].type === 'ok') {
+    const count = parseInt(res.results[0].response.result.rows[0][0].value);
+    if (count === 0) {
+      const inserts = DEFAULT_ROUTINE.map(d => ({
+        sql: "INSERT INTO day_titles (week_id, day_index, title) VALUES (?, ?, ?)",
+        args: [currentWeekId, d.day, d.title]
+      }));
+      await dbBatch(inserts);
+    }
+  }
 }
 
 async function checkAndSeedExercises() {
@@ -143,6 +161,14 @@ async function createWeek(name) {
   const newId = parseInt(res.results[0].response.result.last_insert_rowid);
 
   const inserts = [];
+  // Seed titles
+  for (const d of DEFAULT_ROUTINE) {
+    inserts.push({
+      sql: "INSERT INTO day_titles (week_id, day_index, title) VALUES (?, ?, ?)",
+      args: [newId, d.day, d.title]
+    });
+  }
+  // Seed exercises
   for (const day of DEFAULT_ROUTINE) {
     for (const ex of day.exs) {
       inserts.push({
@@ -155,9 +181,21 @@ async function createWeek(name) {
 
   weeks.push({ id: newId, name });
   currentWeekId = newId;
+  await loadDayTitles();
   await loadExercises();
   renderWeekSelector();
   renderRoutine();
+}
+
+async function loadDayTitles() {
+  if (!currentWeekId) return;
+  const res = await dbQuery("SELECT day_index, title FROM day_titles WHERE week_id = ?", [currentWeekId]);
+  if (res && res.results[0].type === 'ok') {
+    dayTitles = {};
+    res.results[0].response.result.rows.forEach(r => {
+      dayTitles[parseInt(r[0].value)] = r[1].value;
+    });
+  }
 }
 
 async function loadExercises() {
@@ -181,6 +219,18 @@ function renderWeekSelector() {
   const select = document.getElementById('week-select');
   if (!select) return;
   select.innerHTML = weeks.map(w => `<option value="${w.id}" ${w.id == currentWeekId ? 'selected' : ''}>${w.name}</option>`).join('');
+}
+
+async function editDayTitle() {
+  const oldTitle = dayTitles[currentDay] || `Día ${currentDay}`;
+  const newTitle = prompt("Cambiar nombre del día:", oldTitle);
+  if (newTitle && newTitle !== oldTitle) {
+    dayTitles[currentDay] = newTitle;
+    renderRoutine();
+    updateSyncStatus(true);
+    await dbQuery("INSERT INTO day_titles (week_id, day_index, title) VALUES (?, ?, ?) ON CONFLICT(week_id, day_index) DO UPDATE SET title = excluded.title", [currentWeekId, currentDay, newTitle]);
+    updateSyncStatus(false);
+  }
 }
 
 async function toggleExercise(id, completed) {
@@ -234,13 +284,17 @@ function renderRoutine() {
   if (!container) return;
 
   const color = colorForDay(currentDay);
+  const displayTitle = dayTitles[currentDay] || `Día ${currentDay}`;
 
   const html = `
     <div class="day-header">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <span class="day-tag" style="background: ${color}20; color: ${color}">DÍA ${currentDay}</span>
-          <h2>Día ${currentDay}</h2>
+      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div style="flex: 1;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+            <span class="day-tag" style="background: ${color}20; color: ${color}">DÍA ${currentDay}</span>
+            <button class="edit-title-btn" onclick="window.editDayTitle()">✏️</button>
+          </div>
+          <h2 style="line-height: 1.2;">${displayTitle}</h2>
         </div>
         <button class="secondary-btn" onclick="document.getElementById('add-exercise-modal').style.display = 'flex'">+ Add Ex</button>
       </div>
@@ -288,6 +342,7 @@ if (weekSelect) {
   weekSelect.addEventListener('change', async (e) => {
     currentWeekId = parseInt(e.target.value);
     updateSyncStatus(true);
+    await loadDayTitles();
     await loadExercises();
     updateSyncStatus(false);
   });
@@ -303,6 +358,36 @@ if (addWeekBtn) {
       updateSyncStatus(false);
     }
   });
+}
+
+async function deleteWeek() {
+  if (!currentWeekId) return;
+  const weekName = weeks.find(w => w.id === currentWeekId)?.name || "esta semana";
+  if (!confirm(`¿Estás seguro de que quieres eliminar la "${weekName}"? Esto borrará todos sus ejercicios y datos.`)) return;
+
+  updateSyncStatus(true);
+  try {
+    await dbQuery("DELETE FROM day_titles WHERE week_id = ?", [currentWeekId]);
+    await dbQuery("DELETE FROM exercises WHERE week_id = ?", [currentWeekId]);
+    await dbQuery("DELETE FROM weeks WHERE id = ?", [currentWeekId]);
+
+    weeks = weeks.filter(w => w.id !== currentWeekId);
+
+    if (weeks.length === 0) {
+      currentWeekId = null;
+      await createWeek("Semana 1");
+    } else {
+      currentWeekId = weeks[weeks.length - 1].id;
+      await loadDayTitles();
+      await loadExercises();
+    }
+
+    renderWeekSelector();
+    renderRoutine();
+  } catch (error) {
+    console.error("Error al eliminar semana:", error);
+  }
+  updateSyncStatus(false);
 }
 
 const deleteWeekBtn = document.getElementById('delete-week-btn');
@@ -324,41 +409,11 @@ document.querySelectorAll('.day-tab').forEach(tab => {
   });
 });
 
-async function deleteWeek() {
-  if (!currentWeekId) return;
-  const weekName = weeks.find(w => w.id === currentWeekId)?.name || "esta semana";
-  if (!confirm(`¿Estás seguro de que quieres eliminar la "${weekName}"? Esto borrará todos sus ejercicios y datos.`)) return;
-
-  updateSyncStatus(true);
-  try {
-    // Eliminar ejercicios de la semana
-    await dbQuery("DELETE FROM exercises WHERE week_id = ?", [currentWeekId]);
-    // Eliminar la semana
-    await dbQuery("DELETE FROM weeks WHERE id = ?", [currentWeekId]);
-
-    // Actualizar estado local
-    weeks = weeks.filter(w => w.id !== currentWeekId);
-
-    if (weeks.length === 0) {
-      currentWeekId = null;
-      await createWeek("Semana 1");
-    } else {
-      currentWeekId = weeks[weeks.length - 1].id;
-      await loadExercises();
-    }
-
-    renderWeekSelector();
-    renderRoutine();
-  } catch (error) {
-    console.error("Error al eliminar semana:", error);
-  }
-  updateSyncStatus(false);
-}
-
 window.toggleExercise = toggleExercise;
 window.updateWeight = updateWeight;
 window.deleteExercise = deleteExercise;
 window.deleteWeek = deleteWeek;
+window.editDayTitle = editDayTitle;
 
 // Init
 initApp();
