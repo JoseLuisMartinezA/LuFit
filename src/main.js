@@ -1,7 +1,7 @@
 import './style.css'
 
-const DB_URL = "https://lufit-notorious.aws-eu-west-1.turso.io/v2/pipeline";
-const DB_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3NjkxNzcyNjQsImlkIjoiOWJiN2U1YWQtNDE0YS00NjFjLWI0MDAtNGFhNjdjN2IwOTJhIiwicmlkIjoiMTVlNTYzZDEtNzUyOC00NDAyLTkzNWMtNDdhNWMxNDc1ZmNlIn0.3_HXFTYeIiapctQU2JLV2aGNXtRcHfjCso1xiPakRQxzoDQArJyQZTUOPmTIkmmWlzS0c7Jdo7EvGYSV3OFcBQ";
+const DB_URL = import.meta.env.VITE_DB_URL;
+const DB_TOKEN = import.meta.env.VITE_DB_TOKEN;
 
 const routineData = [
   {
@@ -52,7 +52,7 @@ const routineData = [
 
 // State
 let currentDay = 1;
-let completedExercises = {};
+let exerciseProgress = {}; // Stores { completed: bool, weight: string }
 let isSyncing = false;
 
 function getUserId() {
@@ -67,7 +67,11 @@ function getUserId() {
 const USER_ID = getUserId();
 
 // Database Operations
-async function dbQuery(sql, args = {}) {
+async function dbQuery(sql, args = []) {
+  if (!DB_URL || !DB_TOKEN) {
+    console.error("Faltan DB_URL o DB_TOKEN en el archivo .env.local");
+    return null;
+  }
   try {
     const response = await fetch(DB_URL, {
       method: 'POST',
@@ -77,7 +81,16 @@ async function dbQuery(sql, args = {}) {
       },
       body: JSON.stringify({
         requests: [
-          { type: 'execute', stmt: { sql, args } }
+          {
+            type: 'execute', stmt: {
+              sql, args: args.map(a =>
+                typeof a === 'boolean' ? { value: a ? 1 : 0 } :
+                  typeof a === 'number' ? { value: a } :
+                    a === null ? { value: null } :
+                      { value: a.toString() }
+              )
+            }
+          }
         ]
       })
     });
@@ -90,15 +103,27 @@ async function dbQuery(sql, args = {}) {
 
 async function loadProgress() {
   updateSyncStatus(true);
-  const data = await dbQuery("SELECT exercise_key, completed FROM progress WHERE user_id = ?", [USER_ID]);
+
+  // Create table if not exists AND alter it to add weight column if it doesn't exist
+  await dbQuery(`CREATE TABLE IF NOT EXISTS progress (
+    user_id TEXT, 
+    exercise_key TEXT, 
+    completed INTEGER, 
+    weight TEXT,
+    PRIMARY KEY (user_id, exercise_key)
+  )`);
+
+  const data = await dbQuery("SELECT exercise_key, completed, weight FROM progress WHERE user_id = ?", [USER_ID]);
 
   if (data && data.results && data.results[0].response.result) {
     const rows = data.results[0].response.result.rows;
-    completedExercises = {};
+    exerciseProgress = {};
     rows.forEach(row => {
-      // Turso returns rows as arrays or objects depending on the driver, 
-      // with the HTTP API they are usually in result.rows as arrays
-      completedExercises[row[0].value] = row[1].value === 1;
+      // row[0] = key, row[1] = completed, row[2] = weight
+      exerciseProgress[row[0].value] = {
+        completed: row[1].value === 1,
+        weight: row[2].value || ""
+      };
     });
   }
   updateSyncStatus(false);
@@ -107,25 +132,40 @@ async function loadProgress() {
 
 async function toggleExercise(day, exerciseName) {
   const key = `${day}-${exerciseName}`;
-  const newState = !completedExercises[key];
+  const current = exerciseProgress[key] || { completed: false, weight: "" };
+  const newState = !current.completed;
 
   // Optimistic UI update
-  completedExercises[key] = newState;
+  exerciseProgress[key] = { ...current, completed: newState };
   renderRoutine();
 
   updateSyncStatus(true);
   await dbQuery(
-    "INSERT INTO progress (user_id, exercise_key, completed) VALUES (?, ?, ?) ON CONFLICT(user_id, exercise_key) DO UPDATE SET completed = excluded.completed",
-    [USER_ID, key, newState ? 1 : 0]
+    "INSERT INTO progress (user_id, exercise_key, completed, weight) VALUES (?, ?, ?, ?) ON CONFLICT(user_id, exercise_key) DO UPDATE SET completed = excluded.completed",
+    [USER_ID, key, newState ? 1 : 0, current.weight]
+  );
+  updateSyncStatus(false);
+}
+
+async function updateWeight(day, exerciseName, weight) {
+  const key = `${day}-${exerciseName}`;
+  const current = exerciseProgress[key] || { completed: false, weight: "" };
+
+  exerciseProgress[key] = { ...current, weight: weight };
+
+  updateSyncStatus(true);
+  await dbQuery(
+    "INSERT INTO progress (user_id, exercise_key, completed, weight) VALUES (?, ?, ?, ?) ON CONFLICT(user_id, exercise_key) DO UPDATE SET weight = excluded.weight",
+    [USER_ID, key, current.completed ? 1 : 0, weight]
   );
   updateSyncStatus(false);
 }
 
 function updateSyncStatus(syncing) {
   isSyncing = syncing;
-  const footer = document.querySelector('.footer p');
-  if (footer) {
-    footer.innerHTML = syncing ? "🔄 Sincronizando con la nube..." : "✨ Progreso guardado en la nube";
+  const footerStatus = document.getElementById('sync-status');
+  if (footerStatus) {
+    footerStatus.innerHTML = syncing ? "🔄 Sincronizando..." : "✨ En la nube";
   }
 }
 
@@ -137,23 +177,38 @@ function renderRoutine() {
 
   const html = `
     <div class="day-header">
-      <span class="day-tag" style="background: ${dayData.color}20; color: ${dayData.color}">DÍA ${dayData.day}</span>
-      <h2>${dayData.title}</h2>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <span class="day-tag" style="background: ${dayData.color}20; color: ${dayData.color}">DÍA ${dayData.day}</span>
+          <h2>${dayData.title}</h2>
+        </div>
+        <button class="reset-btn" onclick="window.resetDay(${currentDay})" title="Reiniciar Día">🔄</button>
+      </div>
     </div>
     
     <div class="exercise-list">
       ${dayData.exercises.map(ex => {
-    const isCompleted = completedExercises[`${currentDay}-${ex.name}`];
+    const prog = exerciseProgress[`${currentDay}-${ex.name}`] || { completed: false, weight: "" };
     return `
-          <div class="exercise-card ${isCompleted ? 'completed' : ''}" 
-               style="color: ${isCompleted ? 'var(--text-secondary)' : 'inherit'}; border-left: 4px solid ${isCompleted ? 'transparent' : dayData.color}"
-               onclick="window.toggleExercise(${currentDay}, '${ex.name}')">
-            <div class="exercise-info">
-              <span class="exercise-name">${ex.name}</span>
-              <span class="exercise-sets">${ex.sets}</span>
+          <div class="exercise-card ${prog.completed ? 'completed' : ''}" 
+               style="border-left: 4px solid ${prog.completed ? 'transparent' : dayData.color}">
+            
+            <div class="exercise-main" onclick="window.toggleExercise(${currentDay}, '${ex.name}')">
+              <div class="exercise-info">
+                <span class="exercise-name">${ex.name}</span>
+                <span class="exercise-sets">${ex.sets}</span>
+              </div>
+              <div class="checkbox-wrapper">
+                <span class="checkmark" style="color: ${dayData.color}"></span>
+              </div>
             </div>
-            <div class="checkbox-wrapper">
-              <span class="checkmark" style="color: ${dayData.color}"></span>
+
+            <div class="exercise-extra">
+               <input type="text" 
+                      placeholder="Peso (kg)" 
+                      value="${prog.weight}" 
+                      onchange="window.updateWeight(${currentDay}, '${ex.name}', this.value)"
+                      onclick="event.stopPropagation()">
             </div>
           </div>
         `;
@@ -164,10 +219,25 @@ function renderRoutine() {
   container.innerHTML = html;
 }
 
-// Global scope for onclick
-window.toggleExercise = toggleExercise;
+window.resetDay = async (day) => {
+  if (!confirm("¿Seguro que quieres reiniciar el progreso de este día?")) return;
 
-// Tab Interaction
+  const dayExercises = routineData.find(d => d.day === day).exercises;
+  updateSyncStatus(true);
+
+  for (const ex of dayExercises) {
+    const key = `${day}-${ex.name}`;
+    exerciseProgress[key] = { completed: false, weight: "" };
+    await dbQuery("DELETE FROM progress WHERE user_id = ? AND exercise_key = ?", [USER_ID, key]);
+  }
+
+  updateSyncStatus(false);
+  renderRoutine();
+};
+
+window.toggleExercise = toggleExercise;
+window.updateWeight = updateWeight;
+
 document.querySelectorAll('.day-tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.day-tab').forEach(t => t.classList.remove('active'));
@@ -177,5 +247,13 @@ document.querySelectorAll('.day-tab').forEach(tab => {
   });
 });
 
-// Initial Load
+// Setup Sync Status in UI
+const footer = document.querySelector('.footer');
+if (footer) {
+  footer.innerHTML = `
+    <p id="sync-status">✨ Cargando LuFit...</p>
+    <p style="font-size: 0.7rem; margin-top: 8px; opacity: 0.5;">ID de Sesión: ${USER_ID}</p>
+  `;
+}
+
 loadProgress();
