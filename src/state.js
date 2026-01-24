@@ -1,4 +1,4 @@
-import { reactive } from 'vue'; // Wait, standard JS app. Using simple object.
+// State Management (Vanilla JS)
 
 export const state = {
     currentUser: JSON.parse(localStorage.getItem('lufit_user')) || null,
