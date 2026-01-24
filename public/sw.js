@@ -1,5 +1,9 @@
-self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', () => self.clients.claim());
+const CACHE_NAME = 'lufit-v3';
+self.addEventListener('install', (e) => {
+    e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(['./', './index.html'])));
+    self.skipWaiting();
+});
+self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', (e) => {
     if (e.request.method !== 'GET' || e.request.url.includes('turso.io')) return;
     e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
