@@ -119,19 +119,21 @@ async function initApp() {
 
   // Initialize DB Tables
   await dbBatch([
-    { sql: 'CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT)' },
+    { sql: 'CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT, email TEXT UNIQUE, is_verified INTEGER DEFAULT 0, verification_code TEXT)' },
     { sql: 'CREATE TABLE IF NOT EXISTS weeks (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, name TEXT)' },
     { sql: 'CREATE TABLE IF NOT EXISTS exercises (id INTEGER PRIMARY KEY AUTOINCREMENT, week_id INTEGER, day_index INTEGER, name TEXT, sets TEXT, completed INTEGER DEFAULT 0, weight TEXT DEFAULT \'\', order_index INTEGER DEFAULT 0)' },
     { sql: 'CREATE TABLE IF NOT EXISTS day_titles (week_id INTEGER, day_index INTEGER, title TEXT, PRIMARY KEY(week_id, day_index))' }
   ]);
 
   // Migrations
+  await dbQuery("ALTER TABLE users ADD COLUMN email TEXT UNIQUE").catch(() => { });
+  await dbQuery("ALTER TABLE users ADD COLUMN is_verified INTEGER DEFAULT 0").catch(() => { });
+  await dbQuery("ALTER TABLE users ADD COLUMN verification_code TEXT").catch(() => { });
   await dbQuery("ALTER TABLE weeks ADD COLUMN user_id INTEGER").catch(() => { });
-  await dbQuery("ALTER TABLE exercises ADD COLUMN order_index INTEGER DEFAULT 0").catch(() => { });
-  await dbQuery("ALTER TABLE day_titles ADD COLUMN day_order INTEGER DEFAULT 0").catch(() => { });
 
-  // Seed default user if not exists
-  await dbQuery("INSERT OR IGNORE INTO users (username, password) VALUES (?, ?)", ["lucia", "364391"]);
+  // Seed/Update Lucia with email and verified status
+  await dbQuery("INSERT OR IGNORE INTO users (username, password, email, is_verified) VALUES (?, ?, ?, ?)", ["lucia", "364391", "lucia@lufit.com", 1]);
+  await dbQuery("UPDATE users SET email = 'lucia@lufit.com', is_verified = 1 WHERE username = 'lucia' AND email IS NULL");
 
   if (!currentUser) {
     showLogin();
@@ -172,32 +174,59 @@ async function loadWeeks() {
 
 function showLogin() {
   document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('register-view').style.display = 'none';
+  document.getElementById('verify-view').style.display = 'none';
+  document.getElementById('login-view').style.display = 'block';
   document.getElementById('app-content').style.display = 'none';
+}
+
+function showRegister() {
+  document.getElementById('login-view').style.display = 'none';
+  document.getElementById('register-view').style.display = 'block';
+}
+
+function showVerify(email) {
+  document.getElementById('login-view').style.display = 'none';
+  document.getElementById('register-view').style.display = 'none';
+  document.getElementById('verify-view').style.display = 'block';
+  const display = document.getElementById('verify-email-display');
+  if (display) display.innerText = email;
 }
 
 function hideLogin() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-content').style.display = 'flex';
   if (currentUser) {
-    document.getElementById('user-display-name').innerText = currentUser.username;
+    const nameEl = document.getElementById('user-display-name');
+    if (nameEl) nameEl.innerText = currentUser.username;
   }
 }
 
 async function login() {
-  const userIn = document.getElementById('login-username').value.trim();
+  const userIn = document.getElementById('login-username').value.trim().toLowerCase();
   const passIn = document.getElementById('login-password').value.trim();
   const errorMsg = document.getElementById('login-error');
 
   if (!userIn || !passIn) return;
 
   updateSyncStatus(true);
-  const res = await dbQuery("SELECT id, username FROM users WHERE username = ? AND password = ?", [userIn, passIn]);
+  const res = await dbQuery("SELECT id, username, is_verified, email FROM users WHERE (username = ? OR email = ?) AND password = ?", [userIn, userIn, passIn]);
 
   if (res && res.results[0].type === 'ok' && res.results[0].response.result.rows.length > 0) {
+    const row = res.results[0].response.result.rows[0];
     const user = {
-      id: res.results[0].response.result.rows[0][0].value,
-      username: res.results[0].response.result.rows[0][1].value
+      id: parseInt(row[0].value),
+      username: row[1].value,
+      is_verified: parseInt(row[2].value) === 1,
+      email: row[3].value
     };
+
+    if (!user.is_verified) {
+      showVerify(user.email);
+      updateSyncStatus(false);
+      return;
+    }
+
     currentUser = user;
     localStorage.setItem('lufit_user', JSON.stringify(user));
     errorMsg.innerText = "";
@@ -213,6 +242,69 @@ function logout() {
   currentUser = null;
   weeks = [];
   location.reload();
+}
+
+async function register() {
+  const userIn = document.getElementById('reg-username').value.trim().toLowerCase();
+  const emailIn = document.getElementById('reg-email').value.trim().toLowerCase();
+  const passIn = document.getElementById('reg-password').value.trim();
+  const errorMsg = document.getElementById('reg-error');
+
+  if (!userIn || !emailIn || !passIn) {
+    errorMsg.innerText = "Completa todos los campos";
+    return;
+  }
+
+  updateSyncStatus(true);
+
+  // Check if username taken
+  const checkUser = await dbQuery("SELECT id FROM users WHERE username = ?", [userIn]);
+  if (checkUser && checkUser.results[0].response.result.rows.length > 0) {
+    errorMsg.innerText = "Ese nombre de usuario ya existe";
+    updateSyncStatus(false);
+    return;
+  }
+
+  // Check if email taken
+  const checkEmail = await dbQuery("SELECT id FROM users WHERE email = ?", [emailIn]);
+  if (checkEmail && checkEmail.results[0].response.result.rows.length > 0) {
+    errorMsg.innerText = "Ese correo ya está registrado";
+    updateSyncStatus(false);
+    return;
+  }
+
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const res = await dbQuery("INSERT INTO users (username, email, password, verification_code, is_verified) VALUES (?, ?, ?, ?, 0)", [userIn, emailIn, passIn, code]);
+
+  if (res && res.results[0].type === 'ok') {
+    alert(`[Simulación Email] Código para ${emailIn}: ${code}`);
+    showVerify(emailIn);
+  } else {
+    errorMsg.innerText = "Error al registrar";
+  }
+  updateSyncStatus(false);
+}
+
+async function verifyCode() {
+  const codeIn = document.getElementById('verify-code').value.trim();
+  const email = document.getElementById('verify-email-display').innerText;
+  const errorMsg = document.getElementById('verify-error');
+
+  updateSyncStatus(true);
+  const res = await dbQuery("SELECT id, username FROM users WHERE email = ? AND verification_code = ?", [email, codeIn]);
+
+  if (res && res.results[0].type === 'ok' && res.results[0].response.result.rows.length > 0) {
+    await dbQuery("UPDATE users SET is_verified = 1 WHERE email = ?", [email]);
+    const row = res.results[0].response.result.rows[0];
+    const user = { id: parseInt(row[0].value), username: row[1].value };
+    currentUser = user;
+    localStorage.setItem('lufit_user', JSON.stringify(user));
+    hideLogin();
+    initApp();
+  } else {
+    errorMsg.innerText = "Código incorrecto";
+  }
+  updateSyncStatus(false);
 }
 
 async function checkAndSeedDayTitles() {
@@ -937,6 +1029,13 @@ window.handleDayPointerDown = handleDayPointerDown;
 window.dayLongPressTimer = dayLongPressTimer;
 window.login = login;
 window.logout = logout;
+window.showRegister = showRegister;
+window.showLoginView = () => {
+  document.getElementById('register-view').style.display = 'none';
+  document.getElementById('login-view').style.display = 'block';
+};
+window.register = register;
+window.verifyCode = verifyCode;
 
 // Init
 initApp();

@@ -152,6 +152,21 @@
   box-shadow: 0 12px 25px rgba(216, 27, 96, 0.4);
 }
 
+.text-link-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-top: 10px;
+  cursor: pointer;
+  text-decoration: underline;
+  transition: var(--transition);
+}
+
+.text-link-btn:hover {
+  color: var(--lu-pink);
+}
+
 /* User Header */
 .user-row {
   display: flex;

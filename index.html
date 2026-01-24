@@ -27,13 +27,45 @@
   <div id="login-screen" class="login-screen" style="display: none;">
     <div class="login-card">
       <img src="favicon.png" alt="LuFit" class="login-logo">
-      <h2>Bienvenida a LuFit</h2>
-      <p>Inicia sesión para ver tus rutinas</p>
-      <div class="login-form">
-        <input type="text" id="login-username" placeholder="Usuario (ej: lucia)">
-        <input type="password" id="login-password" placeholder="Contraseña">
-        <p id="login-error" class="login-error"></p>
-        <button onclick="window.login()" class="primary-btn">Entrar</button>
+
+      <!-- View: Login -->
+      <div id="login-view">
+        <h2>Bienvenida a LuFit</h2>
+        <p>Inicia sesión para ver tus rutinas</p>
+        <div class="login-form">
+          <input type="text" id="login-username" placeholder="Usuario o Email">
+          <input type="password" id="login-password" placeholder="Contraseña">
+          <p id="login-error" class="login-error"></p>
+          <button onclick="window.login()" class="primary-btn">Entrar</button>
+          <button onclick="window.showRegister()" class="text-link-btn">Crear cuenta nueva</button>
+        </div>
+      </div>
+
+      <!-- View: Register -->
+      <div id="register-view" style="display: none;">
+        <h2>Crear Cuenta</h2>
+        <p>Regístrate para guardar tu progreso</p>
+        <div class="login-form">
+          <input type="text" id="reg-username" placeholder="Nombre de Usuario">
+          <input type="email" id="reg-email" placeholder="Email">
+          <input type="password" id="reg-password" placeholder="Contraseña">
+          <p id="reg-error" class="login-error"></p>
+          <button onclick="window.register()" class="primary-btn">Registrarse</button>
+          <button onclick="window.showLoginView()" class="text-link-btn">Ya tengo cuenta</button>
+        </div>
+      </div>
+
+      <!-- View: Verify -->
+      <div id="verify-view" style="display: none;">
+        <h2>Verificar Email</h2>
+        <p>Introduce el código enviado a:<br><strong id="verify-email-display"></strong></p>
+        <div class="login-form">
+          <input type="text" id="verify-code" placeholder="Código de 6 dígitos" maxlength="6"
+            style="text-align: center; letter-spacing: 4px; font-size: 1.2rem;">
+          <p id="verify-error" class="login-error"></p>
+          <button onclick="window.verifyCode()" class="primary-btn">Verificar</button>
+          <button onclick="window.showLoginView()" class="text-link-btn">Volver al inicio</button>
+        </div>
       </div>
     </div>
   </div>
