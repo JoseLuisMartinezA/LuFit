@@ -328,20 +328,30 @@ function handlePointerDown(e, id, index) {
   const initialX = e.clientX;
   const initialY = e.clientY;
 
+  const clearTimer = () => {
+    clearTimeout(window.longPressTimer);
+    window.removeEventListener('pointermove', handlePointerMoveCancel);
+    window.removeEventListener('pointerup', clearTimer);
+    window.removeEventListener('pointercancel', clearTimer);
+  };
+
   const handlePointerMoveCancel = (moveEvent) => {
     const dist = Math.sqrt(Math.pow(moveEvent.clientX - initialX, 2) + Math.pow(moveEvent.clientY - initialY, 2));
-    if (dist > 10) { // If moved more than 10px, it's a scroll, not a long press
-      clearTimeout(window.longPressTimer);
-      window.removeEventListener('pointermove', handlePointerMoveCancel);
+    if (dist > 30) { // Increased threshold to 30px to be more forgiving
+      clearTimer();
     }
   };
 
-  window.addEventListener('pointermove', handlePointerMoveCancel, { once: false });
+  window.addEventListener('pointermove', handlePointerMoveCancel);
+  window.addEventListener('pointerup', clearTimer);
+  window.addEventListener('pointercancel', clearTimer);
 
   window.longPressTimer = setTimeout(() => {
     window.removeEventListener('pointermove', handlePointerMoveCancel);
+    window.removeEventListener('pointerup', clearTimer);
+    window.removeEventListener('pointercancel', clearTimer);
     startDrag(e);
-  }, 2500); // 2.5 seconds for long press ("un rato")
+  }, 1500); // 1.5 seconds is the sweet spot for "long press"
 }
 
 function startDrag(e) {
