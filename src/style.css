@@ -1337,3 +1337,228 @@ body.is-dragging * {
   filter: drop-shadow(0 0 8px rgba(216, 27, 96, 0.5));
 }
 
+
+
+/* ... (existing styles) ... */
+
+/* ROUTINE CARD STYLES */
+.routine-card {
+  background: var(--panel-color);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.routine-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.routine-card.active-routine {
+  border-color: var(--lu-pink);
+  background: linear-gradient(135deg, rgba(216, 27, 96, 0.1) 0%, rgba(18, 18, 21, 1) 100%);
+}
+
+.routine-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.routine-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 4px;
+}
+
+.routine-meta {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.routine-actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.routine-actions button {
+  flex: 1;
+}
+
+.danger-btn-small {
+  background: rgba(255, 59, 48, 0.1);
+  color: #ff5252;
+  border: 1px solid rgba(255, 59, 48, 0.2);
+  padding: 8px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.danger-btn-small:hover {
+  background: rgba(255, 59, 48, 0.2);
+  transform: scale(1.05);
+}
+
+.add-routine-btn {
+  width: 100%;
+  padding: 20px;
+  border: 2px dashed rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.3s;
+}
+
+.add-routine-btn:hover {
+  border-color: var(--lu-pink);
+  color: white;
+  background: rgba(216, 27, 96, 0.05);
+}
+
+/* Dashboard Profile Stats */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 16px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.stat-icon {
+  font-size: 1.5rem;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: white;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+}
+
+.stat-progress {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.stat-progress-bar {
+  height: 100%;
+  background: var(--lu-gradient);
+  border-radius: 4px;
+}
+
+.active-routine-card {
+  background: linear-gradient(135deg, rgba(216, 27, 96, 0.2) 0%, rgba(18, 18, 21, 1) 100%);
+  border: 1px solid var(--lu-pink);
+  padding: 24px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: transform 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.active-routine-card:hover {
+  transform: scale(1.02);
+}
+
+.active-routine-card .routine-name {
+  font-size: 1.4rem;
+}
+
+.steps-input-section {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.steps-input-section input {
+  flex: 1;
+}
+
+/* Bottom Nav */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(18, 18, 21, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  justify-content: space-around;
+  padding: 12px 12px 28px; /* Extra padding for iPhone home indicator */
+  z-index: 1000;
+}
+
+.bottom-nav-item {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.3s;
+  opacity: 0.7;
+}
+
+.bottom-nav-item svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2px;
+}
+
+.bottom-nav-item.active {
+  color: var(--lu-pink);
+  opacity: 1;
+  transform: translateY(-2px);
+}
+
+.bottom-nav-item.active svg {
+  filter: drop-shadow(0 0 8px rgba(216, 27, 96, 0.5));
+}
+
