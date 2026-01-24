@@ -68,6 +68,14 @@ let lastPointerEvent = null;
 let dragStartPageY = 0;
 let dragInitialRect = null;
 
+let daysOrder = [];
+let isDayDragging = false;
+let dayDragTarget = null;
+let dayDragStartX = 0;
+let dayDragStartIndex = -1;
+let dayDragCurrentIndex = -1;
+let dayLongPressTimer = null;
+
 // Database Operations
 async function dbBatch(requests) {
   if (!DB_URL || !DB_TOKEN) return null;
@@ -115,6 +123,7 @@ async function initApp() {
 
   // Migration: Add order_index if it doesn't exist (it will fail silently if it does)
   await dbQuery("ALTER TABLE exercises ADD COLUMN order_index INTEGER DEFAULT 0").catch(() => { });
+  await dbQuery("ALTER TABLE day_titles ADD COLUMN day_order INTEGER DEFAULT 0").catch(() => { });
 
   const weeksRes = await dbQuery("SELECT id, name FROM weeks ORDER BY id ASC");
   if (weeksRes && weeksRes.results[0].type === 'ok') {
@@ -140,9 +149,9 @@ async function checkAndSeedDayTitles() {
   if (res && res.results[0].type === 'ok') {
     const count = parseInt(res.results[0].response.result.rows[0][0].value);
     if (count === 0) {
-      const inserts = DEFAULT_ROUTINE.map(d => ({
-        sql: "INSERT INTO day_titles (week_id, day_index, title) VALUES (?, ?, ?)",
-        args: [currentWeekId, d.day, d.title]
+      const inserts = DEFAULT_ROUTINE.map((d, i) => ({
+        sql: "INSERT INTO day_titles (week_id, day_index, title, day_order) VALUES (?, ?, ?, ?)",
+        args: [currentWeekId, d.day, d.title, i]
       }));
       await dbBatch(inserts);
     }
@@ -176,12 +185,12 @@ async function createWeek(name) {
 
   const inserts = [];
   // Seed titles
-  for (const d of DEFAULT_ROUTINE) {
+  DEFAULT_ROUTINE.forEach((d, i) => {
     inserts.push({
-      sql: "INSERT INTO day_titles (week_id, day_index, title) VALUES (?, ?, ?)",
-      args: [newId, d.day, d.title]
+      sql: "INSERT INTO day_titles (week_id, day_index, title, day_order) VALUES (?, ?, ?, ?)",
+      args: [newId, d.day, d.title, i]
     });
-  }
+  });
   // Seed exercises
   for (const day of DEFAULT_ROUTINE) {
     for (const ex of day.exs) {
@@ -203,13 +212,17 @@ async function createWeek(name) {
 
 async function loadDayTitles() {
   if (!currentWeekId) return;
-  const res = await dbQuery("SELECT day_index, title FROM day_titles WHERE week_id = ?", [currentWeekId]);
+  const res = await dbQuery("SELECT day_index, title, day_order FROM day_titles WHERE week_id = ? ORDER BY day_order ASC, day_index ASC", [currentWeekId]);
   if (res && res.results[0].type === 'ok') {
     dayTitles = {};
+    daysOrder = [];
     res.results[0].response.result.rows.forEach(r => {
-      dayTitles[parseInt(r[0].value)] = r[1].value;
+      const idx = parseInt(r[0].value);
+      dayTitles[idx] = r[1].value;
+      daysOrder.push({ index: idx, title: r[1].value, order: parseInt(r[2].value || "0") });
     });
   }
+  renderDaySelector();
 }
 
 async function loadExercises() {
@@ -652,15 +665,176 @@ if (deleteWeekBtn) {
 const saveExBtn = document.getElementById('save-ex-btn');
 if (saveExBtn) saveExBtn.addEventListener('click', saveExercise);
 
-document.querySelectorAll('.day-tab').forEach(tab => {
-  tab.addEventListener('click', async () => {
-    document.querySelectorAll('.day-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    currentDay = parseInt(tab.dataset.day);
-    updateSyncStatus(true);
-    await loadExercises();
-    updateSyncStatus(false);
+function renderDaySelector() {
+  const container = document.querySelector('.day-selector');
+  if (!container) return;
+
+  container.innerHTML = daysOrder.map((day, idx) => `
+    <button class="day-tab ${day.index === currentDay ? 'active' : ''}" 
+            data-day="${day.index}"
+            data-index="${idx}"
+            onpointerdown="window.handleDayPointerDown(event, ${day.index}, ${idx})"
+            onpointerup="clearTimeout(window.dayLongPressTimer)">
+      Día ${day.index}
+    </button>
+  `).join('');
+}
+
+async function selectDay(dayIndex) {
+  if (isDayDragging) return;
+  currentDay = dayIndex;
+  document.querySelectorAll('.day-tab').forEach(t => {
+    t.classList.remove('active');
+    if (parseInt(t.dataset.day) === dayIndex) t.classList.add('active');
   });
+  updateSyncStatus(true);
+  await loadExercises();
+  updateSyncStatus(false);
+}
+
+// Day Reordering Logic
+function handleDayPointerDown(e, dayIndex, index) {
+  if (isDayDragging) return;
+
+  const target = e.currentTarget;
+  dayDragStartX = e.clientX;
+  dayDragStartIndex = index;
+  dayDragCurrentIndex = index;
+  dayDragTarget = target;
+
+  const initialX = e.clientX;
+  const initialY = e.clientY;
+
+  const clearDayTimer = () => {
+    clearTimeout(window.dayLongPressTimer);
+    window.removeEventListener('pointermove', handleDayMoveCancel);
+    window.removeEventListener('pointerup', clearDayTimer);
+    window.removeEventListener('pointercancel', clearDayTimer);
+  };
+
+  const handleDayMoveCancel = (moveEvent) => {
+    const dist = Math.sqrt(Math.pow(moveEvent.clientX - initialX, 2) + Math.pow(moveEvent.clientY - initialY, 2));
+    if (dist > 15) clearDayTimer();
+  };
+
+  window.addEventListener('pointermove', handleDayMoveCancel);
+  window.addEventListener('pointerup', clearDayTimer);
+  window.addEventListener('pointercancel', clearDayTimer);
+
+  window.dayLongPressTimer = setTimeout(() => {
+    clearDayTimer();
+    startDayDrag(e);
+  }, 1500);
+}
+
+function startDayDrag(e) {
+  isDayDragging = true;
+  dayDragTarget.classList.add('dragging');
+  document.body.classList.add('is-dragging');
+
+  // Lock screen
+  document.body.style.overflow = 'hidden';
+  document.body.style.touchAction = 'none';
+
+  if (navigator.vibrate) navigator.vibrate(50);
+
+  window.addEventListener('pointermove', handleDayPointerMove, { passive: false });
+  window.addEventListener('pointerup', handleDayPointerUp);
+}
+
+function handleDayPointerMove(e) {
+  if (!isDayDragging) return;
+  e.preventDefault();
+
+  const deltaX = e.clientX - dayDragStartX;
+  dayDragTarget.style.transform = `translate3d(${deltaX}px, 0, 0) scale(1.1)`;
+  dayDragTarget.style.zIndex = "1000";
+
+  const container = document.querySelector('.day-selector');
+  const tabs = [...container.querySelectorAll('.day-tab:not(.dragging)')];
+
+  let itemsBefore = 0;
+  const currentFingerX = e.clientX;
+
+  tabs.forEach((tab) => {
+    const rect = tab.getBoundingClientRect();
+    const midPoint = rect.left + rect.width / 2;
+    if (currentFingerX > midPoint) {
+      itemsBefore++;
+    }
+  });
+
+  const newIndex = itemsBefore;
+  if (newIndex !== dayDragCurrentIndex) {
+    dayDragCurrentIndex = newIndex;
+    updateDaysUI();
+  }
+}
+
+function updateDaysUI() {
+  const container = document.querySelector('.day-selector');
+  const tabs = [...container.querySelectorAll('.day-tab:not(.dragging)')];
+  const dragWidth = dayDragTarget.offsetWidth + 6; // 6 is padding/gap
+
+  tabs.forEach((tab) => {
+    const originalIndex = parseInt(tab.dataset.index);
+    let offset = 0;
+
+    if (dayDragCurrentIndex <= originalIndex && originalIndex < dayDragStartIndex) {
+      offset = dragWidth;
+    } else if (dayDragStartIndex < originalIndex && originalIndex <= dayDragCurrentIndex) {
+      offset = -dragWidth;
+    }
+
+    tab.style.transform = `translate3d(${offset}px, 0, 0)`;
+  });
+}
+
+async function handleDayPointerUp(e) {
+  if (!isDayDragging) {
+    if (dayDragTarget && !e.pointerType === 'mouse') {
+      // Handle click if it wasn't a drag
+      selectDay(parseInt(dayDragTarget.dataset.day));
+    }
+    return;
+  }
+
+  isDayDragging = false;
+  document.body.style.overflow = '';
+  document.body.style.touchAction = '';
+  document.body.classList.remove('is-dragging');
+
+  dayDragTarget.classList.remove('dragging');
+  dayDragTarget.style.transform = '';
+  dayDragTarget.style.zIndex = "";
+
+  window.removeEventListener('pointermove', handleDayPointerMove);
+  window.removeEventListener('pointerup', handleDayPointerUp);
+
+  if (dayDragCurrentIndex !== -1 && dayDragCurrentIndex !== dayDragStartIndex) {
+    const movedItem = daysOrder.splice(dayDragStartIndex, 1)[0];
+    daysOrder.splice(dayDragCurrentIndex, 0, movedItem);
+
+    // Update order in DB
+    updateSyncStatus(true);
+    const updates = daysOrder.map((day, idx) => ({
+      sql: "UPDATE day_titles SET day_order = ? WHERE week_id = ? AND day_index = ?",
+      args: [idx, currentWeekId, day.index]
+    }));
+    await dbBatch(updates);
+    updateSyncStatus(false);
+  }
+
+  renderDaySelector();
+  dayDragTarget = null;
+}
+
+// Re-map click listener logic to work with dynamic tabs
+document.addEventListener('click', (e) => {
+  const tab = e.target.closest('.day-tab');
+  if (tab && !isDayDragging) {
+    selectDay(parseInt(tab.dataset.day));
+  }
 });
 
 window.toggleExercise = toggleExercise;
@@ -672,6 +846,8 @@ window.openAddModal = openAddModal;
 window.openEditModal = openEditModal;
 window.closeModal = closeModal;
 window.handlePointerDown = handlePointerDown;
+window.handleDayPointerDown = handleDayPointerDown;
+window.dayLongPressTimer = dayLongPressTimer;
 
 // Init
 initApp();
