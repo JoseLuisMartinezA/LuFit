@@ -1594,3 +1594,44 @@ body.is-dragging * {
   margin: 0 !important;
 }
 
+
+
+/* Day Header Styles */
+.day-header-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.day-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.icon-btn-small {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--panel-border);
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: var(--transition);
+}
+
+.icon-btn-small:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.1);
+}
+
+.delete-day-btn:hover {
+  background: rgba(255, 59, 48, 0.15);
+  color: #ff4d4d;
+  border-color: rgba(255, 59, 48, 0.3);
+}
+

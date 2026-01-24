@@ -614,13 +614,14 @@ export function renderRoutine() {
 
   container.innerHTML = `
     <div class="day-header">
-      <div style="flex: 1;">
-         <div style="display: flex; align-items: center; gap: 8px;">
-           <span class="day-tag" style="background: ${color}20; color: ${color}">DÍA ${state.currentDay}</span>
-           <button class="edit-title-btn" onclick="window.editDayTitle()">✏️</button>
+      <div class="day-header-top">
+         <span class="day-tag" style="background: ${color}20; color: ${color}; margin-bottom: 0;">DÍA ${state.currentDay}</span>
+         <div class="day-header-actions">
+           <button class="icon-btn-small" onclick="window.editDayTitle()" title="Editar nombre">✏️</button>
+           <button class="icon-btn-small delete-day-btn" onclick="window.deleteDay()" title="Eliminar día">🗑️</button>
          </div>
-         <h2>${displayTitle}</h2>
       </div>
+      <h2>${displayTitle}</h2>
     </div>
     <div class="exercise-list">
       ${state.currentExercises.map((ex, idx) => `
@@ -700,7 +701,7 @@ export async function updateWeight(id, val) {
 }
 
 export async function deleteExercise(id) {
-  if (confirm("Borrar?")) {
+  if (confirm("¿Borrar ejercicio?")) {
     await dbQuery("DELETE FROM exercises WHERE id = ?", [id]);
     await loadExercises();
   }
@@ -713,6 +714,33 @@ export async function editDayTitle() {
     await dbQuery("UPDATE day_titles SET title = ? WHERE week_id = ? AND day_index = ?", [newT, state.currentWeekId, state.currentDay]);
     state.dayTitles[state.currentDay] = newT;
     renderRoutine();
+  }
+}
+
+export async function deleteDay() {
+  if (Object.keys(state.dayTitles).length <= 1) {
+    alert("No puedes eliminar el único día de la semana.");
+    return;
+  }
+  if (!confirm(`¿Eliminar por completo el día ${state.currentDay} y todos sus ejercicios?`)) return;
+
+  updateSyncStatus(true);
+  try {
+    await dbQuery("DELETE FROM day_titles WHERE week_id = ? AND day_index = ?", [state.currentWeekId, state.currentDay]);
+    await dbQuery("DELETE FROM exercises WHERE week_id = ? AND day_index = ?", [state.currentWeekId, state.currentDay]);
+
+    delete state.dayTitles[state.currentDay];
+
+    // Switch to another available day
+    const availableDays = Object.keys(state.dayTitles).map(k => parseInt(k)).sort((a, b) => a - b);
+    state.currentDay = availableDays[0];
+
+    await loadExercises();
+    renderDaySelector();
+  } catch (err) {
+    console.error("Error deleting day", err);
+  } finally {
+    updateSyncStatus(false);
   }
 }
 
@@ -1040,7 +1068,7 @@ if (typeof window !== 'undefined') {
     login, register, logout, showRegister, showLoginView, showProfileSetup, saveProfile,
     toggleAccountMenu, updateTodaySteps, showView, setActiveRoutine, deleteRoutine,
     showCreateRoutineModal, confirmCreateRoutine, addDay, setDay, editDayTitle,
-    toggleExercise, openEditModal, openAddModal, deleteExercise, updateWeight,
+    toggleExercise, openEditModal, openAddModal, deleteExercise, updateWeight, deleteDay,
     handlePointerDown, openAddModal, renderProfile, renderRoutinesList
   });
 }
