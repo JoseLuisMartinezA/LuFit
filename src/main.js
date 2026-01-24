@@ -365,11 +365,14 @@ function startDrag(e) {
   document.body.style.webkitUserSelect = 'none';
   document.body.style.touchAction = 'none';
 
-  // Create vibration feedback if available
-  if (navigator.vibrate) navigator.vibrate(50);
-
-  window.addEventListener('pointermove', handlePointerMove);
+  // Force-disable natural scrolling by preventing default on touchMove/pointerMove
+  window.addEventListener('touchmove', preventDefault, { passive: false });
+  window.addEventListener('pointermove', handlePointerMove, { passive: false });
   window.addEventListener('pointerup', handlePointerUp);
+}
+
+function preventDefault(e) {
+  if (isDragging) e.preventDefault();
 }
 
 function handlePointerMove(e) {
@@ -484,6 +487,7 @@ async function handlePointerUp(e) {
   dragTarget.style.transform = '';
   dragTarget.style.zIndex = "";
 
+  window.removeEventListener('touchmove', preventDefault);
   window.removeEventListener('pointermove', handlePointerMove);
   window.removeEventListener('pointerup', handlePointerUp);
 
