@@ -175,7 +175,6 @@ async function loadWeeks() {
 function showLogin() {
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('register-view').style.display = 'none';
-  document.getElementById('verify-view').style.display = 'none';
   document.getElementById('login-view').style.display = 'block';
   document.getElementById('app-content').style.display = 'none';
 }
@@ -183,18 +182,6 @@ function showLogin() {
 function showRegister() {
   document.getElementById('login-view').style.display = 'none';
   document.getElementById('register-view').style.display = 'block';
-}
-
-function showVerify(email) {
-  document.getElementById('login-view').style.display = 'none';
-  document.getElementById('register-view').style.display = 'none';
-  document.getElementById('verify-view').style.display = 'block';
-  const display = document.getElementById('verify-email-display');
-  if (display) display.innerText = email;
-
-  // Clear any previous error
-  const err = document.getElementById('verify-error');
-  if (err) err.innerText = "";
 }
 
 function hideLogin() {
@@ -214,22 +201,14 @@ async function login() {
   if (!userIn || !passIn) return;
 
   updateSyncStatus(true);
-  const res = await dbQuery("SELECT id, username, is_verified, email FROM users WHERE (username = ? OR email = ?) AND password = ?", [userIn, userIn, passIn]);
+  const res = await dbQuery("SELECT id, username FROM users WHERE (username = ? OR email = ?) AND password = ?", [userIn, userIn, passIn]);
 
   if (res && res.results[0].type === 'ok' && res.results[0].response.result.rows.length > 0) {
     const row = res.results[0].response.result.rows[0];
     const user = {
       id: parseInt(row[0].value),
-      username: row[1].value,
-      is_verified: parseInt(row[2].value) === 1,
-      email: row[3].value
+      username: row[1].value
     };
-
-    if (!user.is_verified) {
-      showVerify(user.email);
-      updateSyncStatus(false);
-      return;
-    }
 
     currentUser = user;
     localStorage.setItem('lufit_user', JSON.stringify(user));
@@ -250,11 +229,10 @@ function logout() {
 
 async function register() {
   const userIn = document.getElementById('reg-username').value.trim().toLowerCase();
-  const emailIn = document.getElementById('reg-email').value.trim().toLowerCase();
   const passIn = document.getElementById('reg-password').value.trim();
   const errorMsg = document.getElementById('reg-error');
 
-  if (!userIn || !emailIn || !passIn) {
+  if (!userIn || !passIn) {
     errorMsg.innerText = "Completa todos los campos";
     return;
   }
@@ -269,54 +247,17 @@ async function register() {
     return;
   }
 
-  // Check if email taken
-  const checkEmail = await dbQuery("SELECT id FROM users WHERE email = ?", [emailIn]);
-  if (checkEmail && checkEmail.results[0].response.result.rows.length > 0) {
-    errorMsg.innerText = "Ese correo ya está registrado";
-    updateSyncStatus(false);
-    return;
-  }
-
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const res = await dbQuery("INSERT INTO users (username, email, password, verification_code, is_verified) VALUES (?, ?, ?, ?, 0)", [userIn, emailIn, passIn, code]);
+  const res = await dbQuery("INSERT INTO users (username, password, is_verified) VALUES (?, ?, 1)", [userIn, passIn]);
 
   if (res && res.results[0].type === 'ok') {
-    // Show success message
-    errorMsg.style.color = "#4ade80";
-    errorMsg.innerText = "¡Cuenta creada! Redirigiendo a verificación...";
-
-    // NOTE: Simulating the email for now. 
-    // In a real app, this goes to the user's inbox via API (e.g. Resend).
-    setTimeout(() => {
-      alert(`📩 [LUFIT] Verificación de correo\n\nTu código es: ${code}\n\n(En la versión final, este mensaje llegará a ${emailIn})`);
-      showVerify(emailIn);
-      errorMsg.style.color = "";
-      errorMsg.innerText = "";
-    }, 1500);
-  } else {
-    errorMsg.innerText = "Error al registrar";
-  }
-  updateSyncStatus(false);
-}
-
-async function verifyCode() {
-  const codeIn = document.getElementById('verify-code').value.trim();
-  const email = document.getElementById('verify-email-display').innerText;
-  const errorMsg = document.getElementById('verify-error');
-
-  updateSyncStatus(true);
-  const res = await dbQuery("SELECT id, username FROM users WHERE email = ? AND verification_code = ?", [email, codeIn]);
-
-  if (res && res.results[0].type === 'ok' && res.results[0].response.result.rows.length > 0) {
-    await dbQuery("UPDATE users SET is_verified = 1 WHERE email = ?", [email]);
-    const row = res.results[0].response.result.rows[0];
-    const user = { id: parseInt(row[0].value), username: row[1].value };
+    const newId = parseInt(res.results[0].response.result.last_insert_rowid);
+    const user = { id: newId, username: userIn };
     currentUser = user;
     localStorage.setItem('lufit_user', JSON.stringify(user));
     hideLogin();
     initApp();
   } else {
-    errorMsg.innerText = "Código incorrecto";
+    errorMsg.innerText = "Error al registrar";
   }
   updateSyncStatus(false);
 }
@@ -1049,7 +990,6 @@ window.showLoginView = () => {
   document.getElementById('login-view').style.display = 'block';
 };
 window.register = register;
-window.verifyCode = verifyCode;
 
 // Init
 initApp();
