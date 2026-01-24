@@ -97,8 +97,30 @@ export async function initApp() {
 
   hideLogin();
   await loadUserProfile();
+  await migrateLegacyData(); // Restore old data if exists
   await loadRoutines();
   updateSyncStatus(false);
+}
+
+async function migrateLegacyData() {
+  // 1. Check if there are orphaned weeks (weeks without routine_id) for this user
+  const orphanedRes = await dbQuery("SELECT id FROM weeks WHERE user_id = ? AND (routine_id IS NULL OR routine_id = 0)", [state.currentUser.id]);
+
+  if (orphanedRes && orphanedRes.results[0].type === 'ok' && orphanedRes.results[0].response.result.rows.length > 0) {
+    console.log("Migrating legacy data...");
+    // 2. Create a container routine for them
+    const now = new Date().toISOString();
+    const routineRes = await dbQuery("INSERT INTO routines (user_id, name, is_active, num_days, created_at) VALUES (?, ?, ?, ?, ?)",
+      [state.currentUser.id, "Rutina Principal", 1, 4, now]);
+
+    if (routineRes && routineRes.results[0].type === 'ok') {
+      const newRoutineId = parseInt(routineRes.results[0].response.result.last_insert_rowid);
+
+      // 3. Update weeks to belong to this routine
+      await dbQuery("UPDATE weeks SET routine_id = ? WHERE user_id = ? AND (routine_id IS NULL OR routine_id = 0)",
+        [newRoutineId, state.currentUser.id]);
+    }
+  }
 }
 
 // ============================================
@@ -765,7 +787,11 @@ export function renderRoutinesList() {
   container.innerHTML = `
       <h2 class="view-title">Mis Rutinas (${state.routines.length}/3)</h2>
       <div class="routines-list">
-        ${state.routines.map(r => `
+        ${state.routines.length === 0 ?
+      `<div style="text-align:center; padding:40px; color:var(--text-secondary);">
+               <p>No tienes rutinas creadas.</p>
+             </div>`
+      : state.routines.map(r => `
           <div class="routine-card ${r.isActive ? 'active-routine' : ''}">
             <div class="routine-header"><div><div class="routine-name">${r.isActive ? '⭐ ' : ''}${r.name}</div><div class="routine-meta">${r.numDays} días</div></div></div>
             <div class="routine-actions">
