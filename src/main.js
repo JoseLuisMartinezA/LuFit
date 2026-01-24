@@ -902,11 +902,17 @@ window.addEventListener('beforeinstallprompt', (e) => {
 if (installBtn) {
   installBtn.addEventListener('click', async () => {
     if (deferredPrompt) {
+      console.log('Triggering install prompt');
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
+      console.log('User choice outcome:', outcome);
+
       if (outcome === 'accepted') {
+        console.log('User accepted the install prompt');
         installBtn.style.display = 'none';
         deferredPrompt = null;
+      } else {
+        console.log('User dismissed the install prompt');
       }
     } else {
       // Fallback/iOS Instructions
@@ -923,9 +929,19 @@ window.addEventListener('appinstalled', () => {
 // Register Service Worker with relative path
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    // We use a relative path to ensure it works on subpaths (like GitHub Pages)
-    navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('SW registered!', reg))
+    // Registering with explicit scope for subpath compatibility
+    navigator.serviceWorker.register('./sw.js', { scope: './' })
+      .then(reg => {
+        console.log('SW registered!', reg);
+        reg.onupdatefound = () => {
+          const installingWorker = reg.installing;
+          installingWorker.onstatechange = () => {
+            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              console.log('New version available, please refresh.');
+            }
+          };
+        };
+      })
       .catch(err => console.log('SW registration failed:', err));
   });
 }

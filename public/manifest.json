@@ -1,22 +1,36 @@
 {
     "name": "LuFit",
     "short_name": "LuFit",
-    "description": "Tu rutina de gimnasio personalizada de 4 días. Perder grasa y ganar músculo con estilo.",
-    "start_url": ".",
+    "description": "Tu rutina de gimnasio personalizada de 4 días.",
+    "id": "lufit-gym-app",
+    "start_url": "./",
+    "scope": "./",
     "display": "standalone",
     "background_color": "#08080a",
     "theme_color": "#d81b60",
     "icons": [
         {
             "src": "favicon.png",
-            "sizes": "64x64 32x32 24x24 16x16",
+            "sizes": "64x64",
             "type": "image/png"
         },
         {
             "src": "app-icon.png",
-            "sizes": "192x192 512x512",
+            "sizes": "192x192",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
+        },
+        {
+            "src": "app-icon.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "app-icon.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
         }
     ]
 }
