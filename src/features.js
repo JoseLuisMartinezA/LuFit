@@ -307,6 +307,67 @@ export async function renderDashboard() {
     </div>`;
 }
 
+export function renderProfile() {
+  const container = document.getElementById('profile-content');
+  if (!container) return;
+  if (!state.userProfile) {
+    container.innerHTML = "<p style='text-align:center; padding:20px;'>Cargando perfil...</p>";
+    return;
+  }
+
+  container.innerHTML = `
+    <h2 class="view-title">Mi Perfil</h2>
+    
+    <div class="summary-card" style="flex-direction:row; align-items:center; text-align:left; margin-bottom:20px; padding:20px;">
+      <div class="account-avatar" style="width:60px; height:60px; font-size:1.5rem;">
+        ${state.currentUser.username.charAt(0).toUpperCase()}
+      </div>
+      <div style="margin-left:16px;">
+        <h3 style="margin:0;">${state.currentUser.username}</h3>
+        <p style="margin:0; opacity:0.7; font-size:0.9rem;">Usuario LuFit</p>
+      </div>
+    </div>
+
+    <div class="dashboard-section">
+      <h3>Datos Corporales</h3>
+      <div class="stats-grid" style="grid-template-columns: 1fr 1fr;">
+        <div class="stat-card">
+          <div class="stat-label">Peso</div>
+          <div class="stat-value" style="font-size:1.5rem;">${state.userProfile.weight} kg</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Altura</div>
+          <div class="stat-value" style="font-size:1.5rem;">${state.userProfile.height} cm</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">IMC</div>
+          <div class="stat-value" style="font-size:1.5rem;">${state.userProfile.bmi}</div>
+          <div class="stat-sublabel" style="font-size:0.8rem; margin-top:4px;">${getBMICategory(state.userProfile.bmi)}</div>
+        </div>
+        <div class="stat-card">
+           <div class="stat-label">Meta Pasos</div>
+           <div class="stat-value" style="font-size:1.5rem;">${state.userProfile.stepsGoal}</div>
+        </div>
+      </div>
+      <button onclick="window.showProfileSetup()" class="secondary-btn" style="width:100%; margin-top:16px;">✏️ Editar Datos</button>
+    </div>
+
+    <div class="dashboard-section" style="margin-top:20px;">
+      <button onclick="window.logout()" class="danger-btn" style="width:100%; justify-content:center;">
+        Cerrar Sesión
+      </button>
+    </div>
+  `;
+}
+
+function getBMICategory(bmi) {
+  const b = parseFloat(bmi);
+  if (b < 18.5) return "Bajo peso";
+  if (b < 25) return "Normal";
+  if (b < 30) return "Sobrepeso";
+  return "Obesidad";
+}
+
 export async function getTodaySteps() {
   const today = new Date().toISOString().split('T')[0];
   const res = await dbQuery("SELECT steps FROM daily_steps WHERE user_id = ? AND date = ?", [state.currentUser.id, today]);
@@ -692,6 +753,7 @@ export function showView(view) {
 
   if (view === 'dashboard') renderDashboard();
   if (view === 'routines') renderRoutinesList();
+  if (view === 'profile') renderProfile();
   if (view === 'routine-detail') {
     renderRoutineDetail();
   }
@@ -803,6 +865,6 @@ if (typeof window !== 'undefined') {
     toggleAccountMenu, updateTodaySteps, showView, setActiveRoutine, deleteRoutine,
     showCreateRoutineModal, confirmCreateRoutine, addDay, setDay, editDayTitle,
     toggleExercise, openEditModal, openAddModal, deleteExercise, updateWeight,
-    handlePointerDown, openAddModal
+    handlePointerDown, openAddModal, renderProfile, renderRoutinesList
   });
 }
