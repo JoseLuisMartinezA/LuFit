@@ -287,17 +287,6 @@ export async function renderDashboard() {
       </div>
     </div>
     <div class="dashboard-section">
-      <h3>💪 Rutina Activa</h3>
-      ${activeRoutine ? `
-        <div class="active-routine-card" onclick="window.showView('routine-detail')">
-          <div class="routine-name">${activeRoutine.name}</div>
-          <div class="routine-info">${activeRoutine.numDays} días</div>
-          <button class="link-btn">Ver Detalles →</button>
-        </div>` :
-      `<p>No tienes una rutina activa</p><button onclick="window.showView('routines')" class="secondary-btn">Ver Mis Rutinas</button>`
-    }
-    </div>
-    <div class="dashboard-section">
       <h3>📈 Progreso de Pasos (Manual)</h3>
       <div class="steps-input-section">
         <input type="number" id="manual-steps-input" placeholder="Pasos hoy" value="${todaySteps}">
