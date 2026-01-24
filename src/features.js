@@ -70,35 +70,43 @@ let editingExerciseId = null;
 export async function initApp() {
   updateSyncStatus(true);
 
-  // Initialize Tables
-  await dbBatch([
-    { sql: 'CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT, email TEXT UNIQUE, is_verified INTEGER DEFAULT 0, verification_code TEXT)' },
-    { sql: 'CREATE TABLE IF NOT EXISTS user_profile (user_id INTEGER PRIMARY KEY, weight REAL, height REAL, age INTEGER, gender TEXT, daily_steps_goal INTEGER DEFAULT 10000, created_at TEXT)' },
-    { sql: 'CREATE TABLE IF NOT EXISTS routines (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, name TEXT, is_active INTEGER DEFAULT 0, num_days INTEGER DEFAULT 4, created_at TEXT)' },
-    { sql: 'CREATE TABLE IF NOT EXISTS weeks (id INTEGER PRIMARY KEY AUTOINCREMENT, routine_id INTEGER, user_id INTEGER, name TEXT)' },
-    { sql: 'CREATE TABLE IF NOT EXISTS exercises (id INTEGER PRIMARY KEY AUTOINCREMENT, week_id INTEGER, day_index INTEGER, name TEXT, sets TEXT, completed INTEGER DEFAULT 0, weight TEXT DEFAULT \'\', order_index INTEGER DEFAULT 0)' },
-    { sql: 'CREATE TABLE IF NOT EXISTS day_titles (week_id INTEGER, day_index INTEGER, title TEXT, day_order INTEGER DEFAULT 0, PRIMARY KEY(week_id, day_index))' },
-    { sql: 'CREATE TABLE IF NOT EXISTS daily_steps (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, steps INTEGER, created_at TEXT)' }
-  ]);
+  try {
+    // Initialize Tables
+    await dbBatch([
+      { sql: 'CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT, email TEXT UNIQUE, is_verified INTEGER DEFAULT 0, verification_code TEXT)' },
+      { sql: 'CREATE TABLE IF NOT EXISTS user_profile (user_id INTEGER PRIMARY KEY, weight REAL, height REAL, age INTEGER, gender TEXT, daily_steps_goal INTEGER DEFAULT 10000, created_at TEXT)' },
+      { sql: 'CREATE TABLE IF NOT EXISTS routines (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, name TEXT, is_active INTEGER DEFAULT 0, num_days INTEGER DEFAULT 4, created_at TEXT)' },
+      { sql: 'CREATE TABLE IF NOT EXISTS weeks (id INTEGER PRIMARY KEY AUTOINCREMENT, routine_id INTEGER, user_id INTEGER, name TEXT)' },
+      { sql: 'CREATE TABLE IF NOT EXISTS exercises (id INTEGER PRIMARY KEY AUTOINCREMENT, week_id INTEGER, day_index INTEGER, name TEXT, sets TEXT, completed INTEGER DEFAULT 0, weight TEXT DEFAULT \'\', order_index INTEGER DEFAULT 0)' },
+      { sql: 'CREATE TABLE IF NOT EXISTS day_titles (week_id INTEGER, day_index INTEGER, title TEXT, day_order INTEGER DEFAULT 0, PRIMARY KEY(week_id, day_index))' },
+      { sql: 'CREATE TABLE IF NOT EXISTS daily_steps (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, steps INTEGER, created_at TEXT)' }
+    ]);
 
-  if (!state.currentUser) {
-    showLogin();
+    if (!state.currentUser) {
+      showLogin();
+      return;
+    }
+
+    // Check Profile
+    const profileRes = await dbQuery("SELECT * FROM user_profile WHERE user_id = ?", [state.currentUser.id]);
+    if (!profileRes || profileRes.results[0].type !== 'ok' || profileRes.results[0].response.result.rows.length === 0) {
+      showProfileSetup();
+      return;
+    }
+
+    hideLogin();
+
+    // SCHEMA MIGRATION
+    try { await dbQuery("ALTER TABLE weeks ADD COLUMN routine_id INTEGER"); } catch (e) { }
+    try { await dbQuery("ALTER TABLE routines ADD COLUMN num_days INTEGER DEFAULT 4"); } catch (e) { }
+
+    await loadRoutines();
+    await loadUserProfile();
+  } catch (err) {
+    console.error("Init failed", err);
+  } finally {
     updateSyncStatus(false);
-    return;
   }
-
-  // Check Profile
-  const profileRes = await dbQuery("SELECT * FROM user_profile WHERE user_id = ?", [state.currentUser.id]);
-  if (!profileRes || profileRes.results[0].type !== 'ok' || profileRes.results[0].response.result.rows.length === 0) {
-    showProfileSetup();
-    updateSyncStatus(false);
-    return;
-  }
-
-  hideLogin();
-  await loadUserProfile();
-  await loadRoutines();
-  updateSyncStatus(false);
 }
 
 // ============================================
