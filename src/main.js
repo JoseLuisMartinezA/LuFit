@@ -724,7 +724,7 @@ function handleDayPointerDown(e, dayIndex, index) {
   window.dayLongPressTimer = setTimeout(() => {
     clearDayTimer();
     startDayDrag(e);
-  }, 1500);
+  }, 800); // More responsive long press for tabs
 }
 
 function startDayDrag(e) {
@@ -732,12 +732,16 @@ function startDayDrag(e) {
   dayDragTarget.classList.add('dragging');
   document.body.classList.add('is-dragging');
 
-  // Lock screen
+  // Lock screen and disable system gestures
   document.body.style.overflow = 'hidden';
+  document.body.style.userSelect = 'none';
+  document.body.style.webkitUserSelect = 'none';
   document.body.style.touchAction = 'none';
 
   if (navigator.vibrate) navigator.vibrate(50);
 
+  // Force-disable natural movement by preventing default
+  window.addEventListener('touchmove', preventDefault, { passive: false });
   window.addEventListener('pointermove', handleDayPointerMove, { passive: false });
   window.addEventListener('pointerup', handleDayPointerUp);
 }
@@ -808,6 +812,7 @@ async function handleDayPointerUp(e) {
   dayDragTarget.style.transform = '';
   dayDragTarget.style.zIndex = "";
 
+  window.removeEventListener('touchmove', preventDefault);
   window.removeEventListener('pointermove', handleDayPointerMove);
   window.removeEventListener('pointerup', handleDayPointerUp);
 
