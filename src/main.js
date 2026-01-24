@@ -732,6 +732,9 @@ function startDayDrag(e) {
   dayDragTarget.classList.add('dragging');
   document.body.classList.add('is-dragging');
 
+  // Use pointer capture to ensure we don't lose the finger/mouse even if it leaves the element
+  dayDragTarget.setPointerCapture(e.pointerId);
+
   // Lock screen and disable system gestures
   document.body.style.overflow = 'hidden';
   document.body.style.userSelect = 'none';
@@ -742,8 +745,9 @@ function startDayDrag(e) {
 
   // Force-disable natural movement by preventing default
   window.addEventListener('touchmove', preventDefault, { passive: false });
-  window.addEventListener('pointermove', handleDayPointerMove, { passive: false });
-  window.addEventListener('pointerup', handleDayPointerUp);
+  dayDragTarget.addEventListener('pointermove', handleDayPointerMove, { passive: false });
+  dayDragTarget.addEventListener('pointerup', handleDayPointerUp);
+  dayDragTarget.addEventListener('pointercancel', handleDayPointerUp); // Also handle cancel
 }
 
 function handleDayPointerMove(e) {
@@ -813,8 +817,13 @@ async function handleDayPointerUp(e) {
   dayDragTarget.style.zIndex = "";
 
   window.removeEventListener('touchmove', preventDefault);
-  window.removeEventListener('pointermove', handleDayPointerMove);
-  window.removeEventListener('pointerup', handleDayPointerUp);
+  dayDragTarget.removeEventListener('pointermove', handleDayPointerMove);
+  dayDragTarget.removeEventListener('pointerup', handleDayPointerUp);
+  dayDragTarget.removeEventListener('pointercancel', handleDayPointerUp);
+
+  if (e.pointerId !== undefined) {
+    dayDragTarget.releasePointerCapture(e.pointerId);
+  }
 
   if (dayDragCurrentIndex !== -1 && dayDragCurrentIndex !== dayDragStartIndex) {
     const movedItem = daysOrder.splice(dayDragStartIndex, 1)[0];
