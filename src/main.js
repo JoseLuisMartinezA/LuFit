@@ -55,7 +55,7 @@ let weeks = [];
 let currentWeekId = null;
 let currentDay = 1;
 let currentExercises = [];
-let dayTitles = {}; // { dayIndex: title }
+let dayTitles = {};
 let editingExerciseId = null;
 let dragTarget = null;
 let dragStartY = 0;
@@ -75,6 +75,8 @@ let dayDragStartX = 0;
 let dayDragStartIndex = -1;
 let dayDragCurrentIndex = -1;
 let dayLongPressTimer = null;
+
+let currentUser = JSON.parse(localStorage.getItem('lufit_user')) || null;
 
 // Database Operations
 async function dbBatch(requests) {
@@ -115,17 +117,42 @@ async function dbQuery(sql, args = []) {
 async function initApp() {
   updateSyncStatus(true);
 
+  // Initialize DB Tables
   await dbBatch([
-    { sql: 'CREATE TABLE IF NOT EXISTS weeks (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)' },
+    { sql: 'CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT)' },
+    { sql: 'CREATE TABLE IF NOT EXISTS weeks (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, name TEXT)' },
     { sql: 'CREATE TABLE IF NOT EXISTS exercises (id INTEGER PRIMARY KEY AUTOINCREMENT, week_id INTEGER, day_index INTEGER, name TEXT, sets TEXT, completed INTEGER DEFAULT 0, weight TEXT DEFAULT \'\', order_index INTEGER DEFAULT 0)' },
     { sql: 'CREATE TABLE IF NOT EXISTS day_titles (week_id INTEGER, day_index INTEGER, title TEXT, PRIMARY KEY(week_id, day_index))' }
   ]);
 
-  // Migration: Add order_index if it doesn't exist (it will fail silently if it does)
+  // Migrations
+  await dbQuery("ALTER TABLE weeks ADD COLUMN user_id INTEGER").catch(() => { });
   await dbQuery("ALTER TABLE exercises ADD COLUMN order_index INTEGER DEFAULT 0").catch(() => { });
   await dbQuery("ALTER TABLE day_titles ADD COLUMN day_order INTEGER DEFAULT 0").catch(() => { });
 
-  const weeksRes = await dbQuery("SELECT id, name FROM weeks ORDER BY id ASC");
+  // Seed default user if not exists
+  await dbQuery("INSERT OR IGNORE INTO users (username, password) VALUES (?, ?)", ["lucia", "364391"]);
+
+  if (!currentUser) {
+    showLogin();
+    updateSyncStatus(false);
+    return;
+  }
+
+  // Ensure old data is assigned to lucia if user_id is null (migration)
+  const luciaRes = await dbQuery("SELECT id FROM users WHERE username = ?", ["lucia"]);
+  if (luciaRes && luciaRes.results[0].type === 'ok') {
+    const luciaId = luciaRes.results[0].response.result.rows[0][0].value;
+    await dbQuery("UPDATE weeks SET user_id = ? WHERE user_id IS NULL", [luciaId]);
+  }
+
+  hideLogin();
+  await loadWeeks();
+  updateSyncStatus(false);
+}
+
+async function loadWeeks() {
+  const weeksRes = await dbQuery("SELECT id, name FROM weeks WHERE user_id = ? ORDER BY id ASC", [currentUser.id]);
   if (weeksRes && weeksRes.results[0].type === 'ok') {
     weeks = weeksRes.results[0].response.result.rows.map(r => ({ id: r[0].value, name: r[1].value }));
   }
@@ -141,7 +168,51 @@ async function initApp() {
   }
 
   renderWeekSelector();
+}
+
+function showLogin() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app-content').style.display = 'none';
+}
+
+function hideLogin() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-content').style.display = 'flex';
+  if (currentUser) {
+    document.getElementById('user-display-name').innerText = currentUser.username;
+  }
+}
+
+async function login() {
+  const userIn = document.getElementById('login-username').value.trim();
+  const passIn = document.getElementById('login-password').value.trim();
+  const errorMsg = document.getElementById('login-error');
+
+  if (!userIn || !passIn) return;
+
+  updateSyncStatus(true);
+  const res = await dbQuery("SELECT id, username FROM users WHERE username = ? AND password = ?", [userIn, passIn]);
+
+  if (res && res.results[0].type === 'ok' && res.results[0].response.result.rows.length > 0) {
+    const user = {
+      id: res.results[0].response.result.rows[0][0].value,
+      username: res.results[0].response.result.rows[0][1].value
+    };
+    currentUser = user;
+    localStorage.setItem('lufit_user', JSON.stringify(user));
+    errorMsg.innerText = "";
+    initApp();
+  } else {
+    errorMsg.innerText = "Usuario o contraseña incorrectos";
+  }
   updateSyncStatus(false);
+}
+
+function logout() {
+  localStorage.removeItem('lufit_user');
+  currentUser = null;
+  weeks = [];
+  location.reload();
 }
 
 async function checkAndSeedDayTitles() {
@@ -178,7 +249,7 @@ async function checkAndSeedExercises() {
 }
 
 async function createWeek(name) {
-  const res = await dbQuery("INSERT INTO weeks (name) VALUES (?)", [name]);
+  const res = await dbQuery("INSERT INTO weeks (user_id, name) VALUES (?, ?)", [currentUser.id, name]);
   if (!res || res.results[0].type !== 'ok') return;
 
   const newId = parseInt(res.results[0].response.result.last_insert_rowid);
@@ -864,6 +935,8 @@ window.closeModal = closeModal;
 window.handlePointerDown = handlePointerDown;
 window.handleDayPointerDown = handleDayPointerDown;
 window.dayLongPressTimer = dayLongPressTimer;
+window.login = login;
+window.logout = logout;
 
 // Init
 initApp();
