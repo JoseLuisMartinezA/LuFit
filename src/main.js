@@ -359,6 +359,12 @@ function startDrag(e) {
   dragTarget.classList.add('dragging');
   document.body.classList.add('is-dragging');
 
+  // Disable natural scrolling and selection
+  document.body.style.overflow = 'hidden';
+  document.body.style.userSelect = 'none';
+  document.body.style.webkitUserSelect = 'none';
+  document.body.style.touchAction = 'none';
+
   // Create vibration feedback if available
   if (navigator.vibrate) navigator.vibrate(50);
 
@@ -466,9 +472,17 @@ async function handlePointerUp(e) {
   isDragging = false;
   stopAutoScroll();
   lastPointerEvent = null;
+
+  // Re-enable natural scrolling and selection
+  document.body.style.overflow = '';
+  document.body.style.userSelect = '';
+  document.body.style.webkitUserSelect = '';
+  document.body.style.touchAction = '';
+
   document.body.classList.remove('is-dragging');
   dragTarget.classList.remove('dragging');
   dragTarget.style.transform = '';
+  dragTarget.style.zIndex = "";
 
   window.removeEventListener('pointermove', handlePointerMove);
   window.removeEventListener('pointerup', handlePointerUp);
