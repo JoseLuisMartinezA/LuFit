@@ -143,8 +143,8 @@ async function initApp() {
 
   // Ensure old data is assigned to lucia if user_id is null (migration)
   const luciaRes = await dbQuery("SELECT id FROM users WHERE username = ?", ["lucia"]);
-  if (luciaRes && luciaRes.results[0].type === 'ok') {
-    const luciaId = luciaRes.results[0].response.result.rows[0][0].value;
+  if (luciaRes && luciaRes.results[0].type === 'ok' && luciaRes.results[0].response.result.rows.length > 0) {
+    const luciaId = parseInt(luciaRes.results[0].response.result.rows[0][0].value);
     await dbQuery("UPDATE weeks SET user_id = ? WHERE user_id IS NULL", [luciaId]);
   }
 
@@ -201,7 +201,7 @@ async function login() {
   if (!userIn || !passIn) return;
 
   updateSyncStatus(true);
-  const res = await dbQuery("SELECT id, username FROM users WHERE (username = ? OR email = ?) AND password = ?", [userIn, userIn, passIn]);
+  const res = await dbQuery("SELECT id, username FROM users WHERE username = ? AND password = ?", [userIn, passIn]);
 
   if (res && res.results[0].type === 'ok' && res.results[0].response.result.rows.length > 0) {
     const row = res.results[0].response.result.rows[0];
@@ -250,12 +250,19 @@ async function register() {
   const res = await dbQuery("INSERT INTO users (username, password, is_verified) VALUES (?, ?, 1)", [userIn, passIn]);
 
   if (res && res.results[0].type === 'ok') {
-    const newId = parseInt(res.results[0].response.result.last_insert_rowid);
-    const user = { id: newId, username: userIn };
-    currentUser = user;
-    localStorage.setItem('lufit_user', JSON.stringify(user));
-    hideLogin();
-    initApp();
+    // Re-login immediately with the new user to ensure ID consistency
+    const loginRes = await dbQuery("SELECT id, username FROM users WHERE username = ? AND password = ?", [userIn, passIn]);
+    if (loginRes && loginRes.results[0].response.result.rows.length > 0) {
+      const row = loginRes.results[0].response.result.rows[0];
+      const user = {
+        id: parseInt(row[0].value),
+        username: row[1].value
+      };
+      currentUser = user;
+      localStorage.setItem('lufit_user', JSON.stringify(user));
+      hideLogin();
+      initApp();
+    }
   } else {
     errorMsg.innerText = "Error al registrar";
   }
