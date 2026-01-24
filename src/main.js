@@ -341,7 +341,7 @@ function handlePointerDown(e, id, index) {
   window.longPressTimer = setTimeout(() => {
     window.removeEventListener('pointermove', handlePointerMoveCancel);
     startDrag(e);
-  }, 1500); // 1.5 seconds for long press (3 seconds felt too long, adjusted for better UX but following user intent)
+  }, 2500); // 2.5 seconds for long press ("un rato")
 }
 
 function startDrag(e) {
@@ -371,22 +371,22 @@ function handlePointerMove(e) {
 
   checkAutoScroll(e);
 
-  // Find potential new index by checking which slot the finger is over
+  // Find potential new index by checking how many slots we are below
   const container = document.querySelector('.exercise-list');
   const cards = [...container.querySelectorAll('.exercise-card:not(.dragging)')];
 
-  let newIndex = dragStartIndex;
+  let itemsAbove = 0;
   const currentFingerY = e.clientY;
 
-  cards.forEach((card, idx) => {
+  cards.forEach((card) => {
     const rect = card.getBoundingClientRect();
     const midPoint = rect.top + rect.height / 2;
-
-    // If we are below the midpoint of a card, our target index is after it
     if (currentFingerY > midPoint) {
-      newIndex = idx >= dragStartIndex ? idx + 1 : idx;
+      itemsAbove++;
     }
   });
+
+  const newIndex = itemsAbove;
 
   if (newIndex !== dragCurrentIndex) {
     dragCurrentIndex = newIndex;
@@ -426,12 +426,21 @@ function stopAutoScroll() {
 }
 
 function updateCardsUI() {
-  const cards = [...document.querySelectorAll('.exercise-card:not(.dragging)')];
-  cards.forEach((card, idx) => {
+  const container = document.querySelector('.exercise-list');
+  const cards = [...container.querySelectorAll('.exercise-card:not(.dragging)')];
+  const dragHeight = dragTarget.offsetHeight + 12;
+
+  cards.forEach((card) => {
+    const originalIndex = parseInt(card.dataset.index);
     let offset = 0;
-    // Apply a slightly more elastic offset
-    if (dragCurrentIndex <= idx && idx < dragStartIndex) offset = dragTarget.offsetHeight + 12;
-    else if (dragStartIndex < idx && idx <= dragCurrentIndex) offset = -(dragTarget.offsetHeight + 12);
+
+    if (dragCurrentIndex <= originalIndex && originalIndex < dragStartIndex) {
+      // Dragging UP: items between target and start move DOWN
+      offset = dragHeight;
+    } else if (dragStartIndex < originalIndex && originalIndex <= dragCurrentIndex) {
+      // Dragging DOWN: items between start and target move UP
+      offset = -dragHeight;
+    }
 
     card.style.transform = `translate3d(0, ${offset}px, 0)`;
   });
@@ -511,6 +520,7 @@ function renderRoutine() {
     <div class="exercise-list">
       ${currentExercises.map((ex, idx) => `
         <div class="exercise-card ${ex.completed ? 'completed' : ''}" 
+             data-index="${idx}"
              style="border-left: 4px solid ${ex.completed ? 'transparent' : color}"
              onpointerdown="window.handlePointerDown(event, ${ex.id}, ${idx})"
              onpointerup="clearTimeout(window.longPressTimer)">
