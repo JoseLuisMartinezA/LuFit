@@ -1,3 +1,38 @@
+.pwa-install-btn {
+  margin-top: 20px;
+  background: var(--lu-gradient);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 100px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(216, 27, 96, 0.3);
+  transition: var(--transition);
+  animation: pulse 2s infinite;
+}
+
+.pwa-install-btn:hover {
+  transform: scale(1.05) translateY(-2px);
+  box-shadow: 0 12px 25px rgba(216, 27, 96, 0.4);
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.03);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
 :root {
   --bg-color: #08080a;
   --panel-color: #121215;
