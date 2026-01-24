@@ -19,6 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/new-styles.css">
   <link rel="manifest" href="./manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
 </head>
@@ -105,52 +106,71 @@
     </header>
 
     <main class="container">
-      <!-- Dashboard Summary -->
-      <section class="summary-cards">
-        <div class="summary-card">
-          <span class="icon">🎯</span>
-          <div class="info">
-            <label>Objetivo</label>
-            <strong>Perder grasa + Músculo</strong>
-          </div>
+      <!-- DASHBOARD VIEW -->
+      <div id="dashboard-view" style="display: none;">
+        <div id="dashboard-content">
+          <!-- Rendered dynamically -->
         </div>
-        <div class="summary-card">
-          <span class="icon">⏱️</span>
-          <div class="info">
-            <label>Duración</label>
-            <strong>~60 min / sesión</strong>
-          </div>
-        </div>
-        <div class="summary-card">
-          <span class="icon">💤</span>
-          <div class="info">
-            <label>Descanso</label>
-            <strong>60–90 seg</strong>
-          </div>
-        </div>
-      </section>
+      </div>
 
-      <!-- Week & Day Selection -->
-      <section class="selection-area">
-        <div class="week-manager">
-          <select id="week-select" class="week-select">
+      <!-- ROUTINES LIST VIEW -->
+      <div id="routines-list-view" style="display: none;">
+        <div id="routines-list-content">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- ROUTINE DETAIL VIEW -->
+      <div id="routine-detail-view" style="display: none;">
+        <div id="routine-detail-content">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Week & Day Selection -->
+        <section class="selection-area">
+          <div class="week-manager">
+            <select id="week-select" class="week-select">
+              <!-- Dynamically populated -->
+            </select>
+            <div class="week-actions">
+              <button id="add-week-btn" class="secondary-btn">＋ Añadir</button>
+              <button id="delete-week-btn" class="danger-btn">🗑 Eliminar</button>
+            </div>
+          </div>
+
+          <nav class="day-selector">
             <!-- Dynamically populated -->
-          </select>
-          <div class="week-actions">
-            <button id="add-week-btn" class="secondary-btn">＋ Añadir</button>
-            <button id="delete-week-btn" class="danger-btn">🗑 Eliminar</button>
-          </div>
-        </div>
+          </nav>
+        </section>
 
-        <nav class="day-selector">
+        <!-- Routine Content -->
+        <section id="routine-content" class="routine-viewer">
           <!-- Dynamically populated -->
-        </nav>
-      </section>
+        </section>
 
-      <!-- Routine Content -->
-      <section id="routine-content" class="routine-viewer">
-        <!-- Dynamically populated -->
-      </section>
+        <!-- Tips Section -->
+        <section class="tips-section">
+          <h2>📌 Tips rápidos</h2>
+          <ul class="tips-list">
+            <li>
+              <span class="tip-icon">⚖️</span>
+              <p>Usa <strong>peso medio</strong> (las últimas reps deben costar)</p>
+            </li>
+            <li>
+              <span class="tip-icon">✨</span>
+              <p>Prioriza <strong>buena técnica</strong> por encima del peso</p>
+            </li>
+            <li>
+              <span class="tip-icon">📈</span>
+              <p>Intenta <strong>mejorar cada semana</strong> (peso o reps)</p>
+            </li>
+            <li>
+              <span class="tip-icon">🚶‍♀️</span>
+              <p>Cardio opcional: 5–10 min al final</p>
+            </li>
+          </ul>
+        </section>
+      </div>
 
       <!-- Modal para añadir ejercicio -->
       <div id="add-exercise-modal" class="modal">
@@ -173,36 +193,39 @@
           </div>
         </div>
       </div>
-
-      <!-- Tips Section -->
-      <section class="tips-section">
-        <h2>📌 Tips rápidos</h2>
-        <ul class="tips-list">
-          <li>
-            <span class="tip-icon">⚖️</span>
-            <p>Usa <strong>peso medio</strong> (las últimas reps deben costar)</p>
-          </li>
-          <li>
-            <span class="tip-icon">✨</span>
-            <p>Prioriza <strong>buena técnica</strong> por encima del peso</p>
-          </li>
-          <li>
-            <span class="tip-icon">📈</span>
-            <p>Intenta <strong>mejorar cada semana</strong> (peso o reps)</p>
-          </li>
-          <li>
-            <span class="tip-icon">🚶‍♀️</span>
-            <p>Cardio opcional: 5–10 min al final</p>
-          </li>
-        </ul>
-      </section>
     </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <button class="bottom-nav-item active" data-view="dashboard" onclick="window.showView('dashboard')">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+        <span>Inicio</span>
+      </button>
+      <button class="bottom-nav-item" data-view="routines" onclick="window.showView('routines')">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+        </svg>
+        <span>Rutinas</span>
+      </button>
+      <button class="bottom-nav-item" data-view="profile" onclick="window.showView('dashboard')">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        <span>Perfil</span>
+      </button>
+    </nav>
+
 
     <footer class="footer">
       <div id="sync-status">✨ LuFit Cloud Active</div>
       <p style="margin-top: 10px;">Guarda esta rutina como referencia diaria</p>
     </footer>
   </div>
+  <script type="module" src="src/features.js"></script>
   <script type="module" src="src/main.js"></script>
 </body>
 

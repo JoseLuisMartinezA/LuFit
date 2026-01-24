@@ -1,0 +1,458 @@
+/* ============================================
+   NUEVOS ESTILOS - SISTEMA DE RUTINAS MÚLTIPLES
+   ============================================ */
+
+/* Profile Setup Screen */
+.profile-setup-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg-color);
+    background-image:
+        radial-gradient(at 0% 0%, rgba(216, 27, 96, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(255, 138, 101, 0.15) 0px, transparent 50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 5000;
+    overflow-y: auto;
+}
+
+.profile-setup-card {
+    background: var(--panel-color);
+    padding: 40px 30px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--panel-border);
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    animation: modalPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.profile-setup-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 24px;
+}
+
+.profile-setup-form select {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--panel-border);
+    padding: 16px;
+    border-radius: 14px;
+    color: white;
+    font-family: inherit;
+    font-size: 1rem;
+    outline: none;
+    transition: var(--transition);
+    cursor: pointer;
+}
+
+.profile-setup-form select:focus {
+    border-color: var(--lu-pink);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* Bottom Navigation */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--panel-color);
+    border-top: 1px solid var(--panel-border);
+    display: flex;
+    justify-content: space-around;
+    padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+    z-index: 100;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.bottom-nav-item {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 12px;
+}
+
+.bottom-nav-item svg {
+    width: 24px;
+    height: 24px;
+}
+
+.bottom-nav-item.active {
+    color: var(--lu-pink);
+}
+
+.bottom-nav-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Dashboard Styles */
+.view-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 24px;
+    color: var(--text-primary);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.stat-card {
+    background: var(--panel-color);
+    border: 1px solid var(--panel-border);
+    padding: 20px;
+    border-radius: var(--radius-md);
+    text-align: center;
+    transition: var(--transition);
+}
+
+.stat-card:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.stat-icon {
+    font-size: 2rem;
+    margin-bottom: 12px;
+}
+
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+}
+
+.stat-sublabel {
+    font-size: 0.75rem;
+    color: var(--lu-pink);
+    margin-top: 4px;
+}
+
+.stat-progress {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 100px;
+    overflow: hidden;
+    margin-top: 12px;
+}
+
+.stat-progress-bar {
+    height: 100%;
+    background: var(--lu-gradient);
+    border-radius: 100px;
+    transition: width 0.5s ease;
+}
+
+.stat-goal {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: 8px;
+}
+
+.dashboard-section {
+    margin-bottom: 32px;
+}
+
+.dashboard-section h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--text-primary);
+}
+
+.active-routine-card {
+    background: var(--panel-color);
+    border: 1px solid var(--panel-border);
+    padding: 20px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.active-routine-card:hover {
+    border-color: var(--lu-pink);
+    transform: translateY(-2px);
+}
+
+.routine-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.routine-info {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+}
+
+.link-btn {
+    background: none;
+    border: none;
+    color: var(--lu-pink);
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.95rem;
+}
+
+.steps-input-section {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.steps-input-section input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--panel-border);
+    padding: 14px;
+    border-radius: 12px;
+    color: white;
+    font-family: inherit;
+    font-size: 1rem;
+    outline: none;
+}
+
+.steps-input-section input:focus {
+    border-color: var(--lu-pink);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* Routines List Styles */
+.routines-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.routine-card {
+    background: var(--panel-color);
+    border: 1px solid var(--panel-border);
+    padding: 20px;
+    border-radius: var(--radius-md);
+    transition: var(--transition);
+}
+
+.routine-card.active-routine {
+    border-color: var(--lu-pink);
+    background: rgba(216, 27, 96, 0.05);
+}
+
+.routine-card:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.routine-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.routine-meta {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.routine-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.danger-btn-small {
+    background: rgba(255, 59, 48, 0.08);
+    border: 1px solid rgba(255, 59, 48, 0.15);
+    color: #ff5252;
+    padding: 8px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: var(--transition);
+}
+
+.danger-btn-small:hover {
+    background: #ff3b30;
+    color: white;
+    border-color: #ff3b30;
+}
+
+.add-routine-btn {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.03);
+    border: 2px dashed var(--panel-border);
+    color: var(--text-secondary);
+    padding: 20px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: var(--transition);
+}
+
+.add-routine-btn:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--lu-pink);
+    color: var(--lu-pink);
+}
+
+.add-routine-btn span {
+    font-size: 1.4rem;
+}
+
+.info-text {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    padding: 20px;
+}
+
+/* Days Selector for Create Routine */
+.days-selector {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.day-option {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.day-option input[type="radio"] {
+    display: none;
+}
+
+.day-option span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border: 2px solid var(--panel-border);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: var(--transition);
+}
+
+.day-option input[type="radio"]:checked+span {
+    border-color: var(--lu-pink);
+    background: rgba(216, 27, 96, 0.1);
+    color: var(--lu-pink);
+}
+
+.day-option:hover span {
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.modal-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.modal-actions button {
+    flex: 1;
+}
+
+/* Routine Detail Header */
+.routine-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.back-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--panel-border);
+    color: var(--text-secondary);
+    padding: 10px 16px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: var(--transition);
+}
+
+.back-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+/* Adjust container for bottom nav */
+.container {
+    padding-bottom: 80px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .routine-actions {
+        width: 100%;
+    }
+
+    .routine-actions button {
+        flex: 1;
+    }
+
+    .days-selector {
+        gap: 8px;
+    }
+
+    .day-option span {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+}
