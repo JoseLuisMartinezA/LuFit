@@ -784,14 +784,17 @@ export function showView(view) {
 export function renderRoutinesList() {
   const container = document.getElementById('routines-list-content');
   if (!container) return;
+
+  const routinesList = state.routines || [];
+
   container.innerHTML = `
-      <h2 class="view-title">Mis Rutinas (${state.routines.length}/3)</h2>
+      <h2 class="view-title">Mis Rutinas (${routinesList.length}/3)</h2>
       <div class="routines-list">
-        ${state.routines.length === 0 ?
+        ${routinesList.length === 0 ?
       `<div style="text-align:center; padding:40px; color:var(--text-secondary);">
                <p>No tienes rutinas creadas.</p>
              </div>`
-      : state.routines.map(r => `
+      : routinesList.map(r => `
           <div class="routine-card ${r.isActive ? 'active-routine' : ''}">
             <div class="routine-header"><div><div class="routine-name">${r.isActive ? '⭐ ' : ''}${r.name}</div><div class="routine-meta">${r.numDays} días</div></div></div>
             <div class="routine-actions">
@@ -802,7 +805,7 @@ export function renderRoutinesList() {
           </div>
         `).join('')}
       </div>
-      ${state.routines.length < 3 ? `<button onclick="window.showCreateRoutineModal()" class="add-routine-btn"><span>➕</span> Nueva Rutina</button>` : ''}
+      ${routinesList.length < 3 ? `<button onclick="window.showCreateRoutineModal()" class="add-routine-btn"><span>➕</span> Nueva Rutina</button>` : ''}
     `;
 }
 
