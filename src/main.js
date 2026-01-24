@@ -885,10 +885,11 @@ function showInstallButton() {
   }
 }
 
-// Show button on load by default if not standalone
-window.addEventListener('DOMContentLoaded', showInstallButton);
-// Also call it immediately in case DOM is already loaded
-showInstallButton();
+// Show button on load if not standalone
+window.addEventListener('load', showInstallButton);
+// Also try immediately
+setTimeout(showInstallButton, 1000);
+setTimeout(showInstallButton, 3000);
 
 // Android / Chrome desktop logic
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -919,10 +920,11 @@ window.addEventListener('appinstalled', () => {
   deferredPrompt = null;
 });
 
-// Register Service Worker
+// Register Service Worker with relative path
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    // We use a relative path to ensure it works on subpaths (like GitHub Pages)
+    navigator.serviceWorker.register('./sw.js')
       .then(reg => console.log('SW registered!', reg))
       .catch(err => console.log('SW registration failed:', err));
   });
