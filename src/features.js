@@ -799,8 +799,11 @@ let isDragging = false;
 let autoScrollInterval = null;
 
 export function handlePointerDown(e, id, index, type = 'exercise') {
-  // Ignore clicks on inputs/buttons
-  if (e.target.closest('button') || e.target.closest('input') || e.target.closest('.checkbox-wrapper')) return;
+  // Ignore interactive elements inside exercises (buttons, inputs)
+  // For Days, the element itself IS a button, so we skip this check for 'day' type
+  if (type === 'exercise') {
+    if (e.target.closest('button') || e.target.closest('input') || e.target.closest('.checkbox-wrapper')) return;
+  }
 
   const target = e.currentTarget;
   dragItem = target;
@@ -814,10 +817,10 @@ export function handlePointerDown(e, id, index, type = 'exercise') {
   dragStartY = clientY;
   touchStartY = clientY;
 
-  // Start Long Press Timer (2 seconds as requested, though 2s is very long, standard is 500ms. Adhering to prompt.)
+  // Start Long Press Timer (1 second as requested)
   dragTimer = setTimeout(() => {
     startDrag(clientX, clientY);
-  }, 2000); // 2000ms = 2s long press
+  }, 1000); // 1000ms = 1s long press
 
   // Cancel logic listeners
   window.addEventListener('pointermove', handlePreDragMove);
