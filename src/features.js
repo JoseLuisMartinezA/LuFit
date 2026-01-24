@@ -578,13 +578,13 @@ export function renderDaySelector() {
 
   const days = Object.keys(state.dayTitles).sort((a, b) => parseInt(a) - parseInt(b));
   let html = days.map(d => `
-    <button class="day-btn ${state.currentDay == d ? 'active' : ''}" onclick="window.setDay(${d})">
+    <button class="day-tab ${state.currentDay == d ? 'active' : ''}" onclick="window.setDay(${d})">
       Día ${d}
     </button>
   `).join('');
 
   if (days.length < 7) {
-    html += `<button class="day-btn add-day-mini" onclick="window.addDay()">＋</button>`;
+    html += `<button class="day-tab add-day-mini" onclick="window.addDay()">＋</button>`;
   }
   container.innerHTML = html;
 }
