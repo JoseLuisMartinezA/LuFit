@@ -371,6 +371,7 @@ function startDrag(e) {
   isDragging = true;
   dragTarget.classList.add('dragging');
   document.body.classList.add('is-dragging');
+  document.documentElement.classList.add('is-dragging');
 
   // Disable natural scrolling and selection
   document.body.style.overflow = 'hidden';
@@ -385,7 +386,9 @@ function startDrag(e) {
 }
 
 function preventDefault(e) {
-  if (isDragging) e.preventDefault();
+  if (isDragging || isDayDragging) {
+    if (e.cancelable) e.preventDefault();
+  }
 }
 
 function handlePointerMove(e) {
@@ -496,6 +499,7 @@ async function handlePointerUp(e) {
   document.body.style.touchAction = '';
 
   document.body.classList.remove('is-dragging');
+  document.documentElement.classList.remove('is-dragging');
   dragTarget.classList.remove('dragging');
   dragTarget.style.transform = '';
   dragTarget.style.zIndex = "";
@@ -731,6 +735,7 @@ function startDayDrag(e) {
   isDayDragging = true;
   dayDragTarget.classList.add('dragging');
   document.body.classList.add('is-dragging');
+  document.documentElement.classList.add('is-dragging');
 
   // Use pointer capture to ensure we don't lose the finger/mouse even if it leaves the element
   dayDragTarget.setPointerCapture(e.pointerId);
@@ -811,6 +816,7 @@ async function handleDayPointerUp(e) {
   document.body.style.overflow = '';
   document.body.style.touchAction = '';
   document.body.classList.remove('is-dragging');
+  document.documentElement.classList.remove('is-dragging');
 
   dayDragTarget.classList.remove('dragging');
   dayDragTarget.style.transform = '';

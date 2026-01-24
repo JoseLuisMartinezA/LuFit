@@ -499,9 +499,13 @@ body.is-dragging .exercise-card {
   transition: transform 0.05s linear, box-shadow 0.2s ease;
 }
 
+html.is-dragging,
 body.is-dragging {
   cursor: grabbing !important;
   user-select: none;
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+  height: 100% !important;
 }
 
 body.is-dragging * {
