@@ -191,6 +191,10 @@ function showVerify(email) {
   document.getElementById('verify-view').style.display = 'block';
   const display = document.getElementById('verify-email-display');
   if (display) display.innerText = email;
+
+  // Clear any previous error
+  const err = document.getElementById('verify-error');
+  if (err) err.innerText = "";
 }
 
 function hideLogin() {
@@ -277,8 +281,18 @@ async function register() {
   const res = await dbQuery("INSERT INTO users (username, email, password, verification_code, is_verified) VALUES (?, ?, ?, ?, 0)", [userIn, emailIn, passIn, code]);
 
   if (res && res.results[0].type === 'ok') {
-    alert(`[Simulación Email] Código para ${emailIn}: ${code}`);
-    showVerify(emailIn);
+    // Show success message
+    errorMsg.style.color = "#4ade80";
+    errorMsg.innerText = "¡Cuenta creada! Redirigiendo a verificación...";
+
+    // NOTE: Simulating the email for now. 
+    // In a real app, this goes to the user's inbox via API (e.g. Resend).
+    setTimeout(() => {
+      alert(`📩 [LUFIT] Verificación de correo\n\nTu código es: ${code}\n\n(En la versión final, este mensaje llegará a ${emailIn})`);
+      showVerify(emailIn);
+      errorMsg.style.color = "";
+      errorMsg.innerText = "";
+    }, 1500);
   } else {
     errorMsg.innerText = "Error al registrar";
   }
