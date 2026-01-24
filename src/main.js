@@ -373,8 +373,7 @@ function startDrag(e) {
   document.body.classList.add('is-dragging');
   document.documentElement.classList.add('is-dragging');
 
-  // Disable natural scrolling and selection
-  document.body.style.overflow = 'hidden';
+  // Disable selection
   document.body.style.userSelect = 'none';
   document.body.style.webkitUserSelect = 'none';
   document.body.style.touchAction = 'none';
@@ -492,8 +491,7 @@ async function handlePointerUp(e) {
   stopAutoScroll();
   lastPointerEvent = null;
 
-  // Re-enable natural scrolling and selection
-  document.body.style.overflow = '';
+  // Re-enable selection
   document.body.style.userSelect = '';
   document.body.style.webkitUserSelect = '';
   document.body.style.touchAction = '';
@@ -740,8 +738,7 @@ function startDayDrag(e) {
   // Use pointer capture to ensure we don't lose the finger/mouse even if it leaves the element
   dayDragTarget.setPointerCapture(e.pointerId);
 
-  // Lock screen and disable system gestures
-  document.body.style.overflow = 'hidden';
+  // Lock user selection
   document.body.style.userSelect = 'none';
   document.body.style.webkitUserSelect = 'none';
   document.body.style.touchAction = 'none';
@@ -813,7 +810,6 @@ async function handleDayPointerUp(e) {
   }
 
   isDayDragging = false;
-  document.body.style.overflow = '';
   document.body.style.touchAction = '';
   document.body.classList.remove('is-dragging');
   document.documentElement.classList.remove('is-dragging');

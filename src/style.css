@@ -503,9 +503,8 @@ html.is-dragging,
 body.is-dragging {
   cursor: grabbing !important;
   user-select: none;
-  overflow: hidden !important;
   overscroll-behavior: none !important;
-  height: 100% !important;
+  touch-action: none !important;
 }
 
 body.is-dragging * {
