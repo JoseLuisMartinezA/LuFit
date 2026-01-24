@@ -2,7 +2,7 @@
     "name": "LuFit",
     "short_name": "LuFit",
     "description": "Tu rutina de gimnasio personalizada de 4 días. Perder grasa y ganar músculo con estilo.",
-    "start_url": "/",
+    "start_url": ".",
     "display": "standalone",
     "background_color": "#08080a",
     "theme_color": "#d81b60",
