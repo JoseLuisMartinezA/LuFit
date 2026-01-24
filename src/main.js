@@ -792,8 +792,8 @@ function updateDaysUI() {
 
 async function handleDayPointerUp(e) {
   if (!isDayDragging) {
-    if (dayDragTarget && !e.pointerType === 'mouse') {
-      // Handle click if it wasn't a drag
+    if (dayDragTarget && e.pointerType !== 'mouse') {
+      // Handle click if it wasn't a drag (for touch devices to prevent double action)
       selectDay(parseInt(dayDragTarget.dataset.day));
     }
     return;
