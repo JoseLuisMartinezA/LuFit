@@ -785,7 +785,7 @@ export async function confirmCreateRoutine() {
 }
 
 // ============================================
-// DRAG & DROP SYSTEM (Long Press 2s)
+// DRAG & DROP SYSTEM (Long Press 1s)
 // ============================================
 
 let dragTimer = null;
@@ -794,6 +794,8 @@ let dragPlaceholder = null;
 let dragType = null; // 'exercise' or 'day'
 let dragStartX = 0;
 let dragStartY = 0;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
 let touchStartY = 0; // For scroll detection cancel
 let isDragging = false;
 let autoScrollInterval = null;
@@ -819,8 +821,9 @@ export function handlePointerDown(e, id, index, type = 'exercise') {
 
   // Start Long Press Timer (1 second as requested)
   dragTimer = setTimeout(() => {
-    startDrag(clientX, clientY);
-  }, 1000); // 1000ms = 1s long press
+    // Note: We use the start position to prevent jump on initial drag
+    startDrag(dragStartX, dragStartY);
+  }, 1000);
 
   // Cancel logic listeners
   window.addEventListener('pointermove', handlePreDragMove);
@@ -863,12 +866,19 @@ function startDrag(startX, startY) {
   document.body.style.overflow = 'hidden';
   document.body.classList.add('is-dragging');
 
-  // Create Placeholder
+  // Calculate Relative Offset
   const rect = dragItem.getBoundingClientRect();
+  dragOffsetX = startX - rect.left;
+  dragOffsetY = startY - rect.top;
+
+  // Create Placeholder
   dragPlaceholder = document.createElement('div');
   dragPlaceholder.className = dragType === 'day' ? 'day-tab sortable-placeholder' : 'exercise-card sortable-placeholder';
   dragPlaceholder.style.width = `${rect.width}px`;
   dragPlaceholder.style.height = `${rect.height}px`;
+  if (dragType === 'day') {
+    dragPlaceholder.style.flex = "none";
+  }
 
   // Insert Placeholder
   dragItem.parentNode.insertBefore(dragPlaceholder, dragItem);
@@ -895,9 +905,9 @@ function handleDragMove(e) {
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
-  // Move Visual Item
-  dragItem.style.setProperty('--drag-x', `${clientX - (dragItem.offsetWidth / 2)}px`);
-  dragItem.style.setProperty('--drag-y', `${clientY - (dragItem.offsetHeight / 2)}px`);
+  // Move Visual Item (Maintain Offset)
+  dragItem.style.setProperty('--drag-x', `${clientX - dragOffsetX}px`);
+  dragItem.style.setProperty('--drag-y', `${clientY - dragOffsetY}px`);
 
   // Auto Scroll logic
   handleAutoScroll(clientY);
