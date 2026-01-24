@@ -227,6 +227,29 @@ function logout() {
   location.reload();
 }
 
+function toggleAccountMenu(event) {
+  event.stopPropagation();
+  const dropdown = document.getElementById('account-dropdown');
+  const isVisible = dropdown.style.display === 'block';
+
+  if (isVisible) {
+    dropdown.style.display = 'none';
+  } else {
+    dropdown.style.display = 'block';
+  }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  const dropdown = document.getElementById('account-dropdown');
+  const accountContainer = document.querySelector('.user-account-container');
+
+  if (dropdown && accountContainer && !accountContainer.contains(e.target)) {
+    dropdown.style.display = 'none';
+  }
+});
+
+
 async function register() {
   const userIn = document.getElementById('reg-username').value.trim().toLowerCase();
   const passIn = document.getElementById('reg-password').value.trim();
@@ -991,6 +1014,7 @@ window.handleDayPointerDown = handleDayPointerDown;
 window.dayLongPressTimer = dayLongPressTimer;
 window.login = login;
 window.logout = logout;
+window.toggleAccountMenu = toggleAccountMenu;
 window.showRegister = showRegister;
 window.showLoginView = () => {
   document.getElementById('register-view').style.display = 'none';
