@@ -102,6 +102,7 @@ export async function initApp() {
 
     await loadRoutines();
     await loadUserProfile();
+    showView('dashboard');
   } catch (err) {
     console.error("Init failed", err);
   } finally {
