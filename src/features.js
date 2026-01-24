@@ -97,30 +97,8 @@ export async function initApp() {
 
   hideLogin();
   await loadUserProfile();
-  await migrateLegacyData(); // Restore old data if exists
   await loadRoutines();
   updateSyncStatus(false);
-}
-
-async function migrateLegacyData() {
-  // 1. Check if there are orphaned weeks (weeks without routine_id) for this user
-  const orphanedRes = await dbQuery("SELECT id FROM weeks WHERE user_id = ? AND (routine_id IS NULL OR routine_id = 0)", [state.currentUser.id]);
-
-  if (orphanedRes && orphanedRes.results[0].type === 'ok' && orphanedRes.results[0].response.result.rows.length > 0) {
-    console.log("Migrating legacy data...");
-    // 2. Create a container routine for them
-    const now = new Date().toISOString();
-    const routineRes = await dbQuery("INSERT INTO routines (user_id, name, is_active, num_days, created_at) VALUES (?, ?, ?, ?, ?)",
-      [state.currentUser.id, "Rutina Principal", 1, 4, now]);
-
-    if (routineRes && routineRes.results[0].type === 'ok') {
-      const newRoutineId = parseInt(routineRes.results[0].response.result.last_insert_rowid);
-
-      // 3. Update weeks to belong to this routine
-      await dbQuery("UPDATE weeks SET routine_id = ? WHERE user_id = ? AND (routine_id IS NULL OR routine_id = 0)",
-        [newRoutineId, state.currentUser.id]);
-    }
-  }
 }
 
 // ============================================
@@ -416,71 +394,72 @@ export async function updateTodaySteps() {
 // ROUTINES & WEEKS MANAGEMENT
 // ============================================
 
+// ============================================
+// ROUTINES (SINGLE MODE RESTORED)
+// ============================================
+
 export async function loadRoutines() {
-  const res = await dbQuery("SELECT id, name, is_active, num_days FROM routines WHERE user_id = ? ORDER BY is_active DESC, id DESC", [state.currentUser.id]);
-  if (res && res.results[0].type === 'ok') {
-    state.routines = res.results[0].response.result.rows.map(r => ({
-      id: parseInt(r[0].value), name: r[1].value, isActive: parseInt(r[2].value) === 1, numDays: parseInt(r[3].value)
-    }));
+  // Force Single Routine Mode
+  // 1. Get or Create the ONE routine
+  let res = await dbQuery("SELECT id, name FROM routines WHERE user_id = ? LIMIT 1", [state.currentUser.id]);
+
+  let mainRoutineId;
+
+  if (res && res.results[0].type === 'ok' && res.results[0].response.result.rows.length > 0) {
+    mainRoutineId = parseInt(res.results[0].response.result.rows[0][0].value);
+  } else {
+    // Create Default
+    const now = new Date().toISOString();
+    const createRes = await dbQuery("INSERT INTO routines (user_id, name, is_active, num_days, created_at) VALUES (?, ?, ?, ?, ?)",
+      [state.currentUser.id, "Mi Rutina", 1, 4, now]);
+    mainRoutineId = parseInt(createRes.results[0].response.result.last_insert_rowid);
   }
 
-  if (state.routines.length === 0) await createDefaultRoutine();
-  else {
-    const active = state.routines.find(r => r.isActive);
-    if (active) {
-      state.currentRoutineId = active.id;
-      await loadWeeks();
-    }
-  }
-  showView('dashboard');
+  state.currentRoutineId = mainRoutineId;
+
+  // 2. FORCE MIGRATION: Link ALL weeks of this user to this routine
+  // This fixes the "Lucy's routine disappeared" issue by gathering any stray weeks
+  await dbQuery("UPDATE weeks SET routine_id = ? WHERE user_id = ?", [mainRoutineId, state.currentUser.id]);
+
+  // 3. Load weeks for this Main Routine
+  await loadWeeks();
+
+  // If we are on routines view, render it now
+  if (state.currentView === 'routines') renderRoutineDetail();
 }
 
 export async function createDefaultRoutine() {
-  await createRoutine("Mi Rutina Principal", 4, true);
+  // This function is effectively deprecated as loadRoutines now handles default creation
+  // but keeping it as a no-op for now to avoid breaking potential external calls.
+  // The new loadRoutines ensures a single routine exists.
 }
 
 export async function createRoutine(name, numDays, isDefault = false) {
-  if (!isDefault && state.routines.length >= 3) { alert("Límite de 3 rutinas alcanzado."); return; }
-
+  // This function is largely deprecated for multi-routine creation.
+  // The only path for routine creation is now through loadRoutines for the single main routine.
+  // If this is called, it will create a routine, but it won't be the "active" one in the single-routine model.
+  // For now, we'll make it create a routine but not set it as current or load weeks for it.
+  // The single routine model doesn't support multiple routines.
+  console.warn("createRoutine called in single-routine mode. This might not behave as expected.");
   const now = new Date().toISOString();
-  const res = await dbQuery("INSERT INTO routines (user_id, name, is_active, num_days, created_at) VALUES (?, ?, ?, ?, ?)",
-    [state.currentUser.id, name, isDefault ? 1 : 0, numDays, now]);
-
-  if (res && res.results[0].type === 'ok') {
-    const newId = parseInt(res.results[0].response.result.last_insert_rowid);
-    state.routines.push({ id: newId, name, isActive: isDefault, numDays });
-    if (isDefault) state.currentRoutineId = newId;
-
-    // Initial Week
-    if (isDefault) {
-      // Use DEFAULT_ROUTINE template
-      await createWeek("Semana 1", newId, true);
-    } else {
-      await createEmptyWeek("Semana 1", newId, numDays);
-    }
-
-    if (!isDefault) renderRoutinesList();
-  }
+  await dbQuery("INSERT INTO routines (user_id, name, is_active, num_days, created_at) VALUES (?, ?, ?, ?, ?)",
+    [state.currentUser.id, name, 0, numDays, now]); // Always inactive in this model
 }
 
 export async function setActiveRoutine(id) {
-  await dbQuery("UPDATE routines SET is_active = 0 WHERE user_id = ?", [state.currentUser.id]);
-  await dbQuery("UPDATE routines SET is_active = 1 WHERE id = ?", [id]);
-  state.routines.forEach(r => r.isActive = (r.id === id));
-  state.currentRoutineId = id;
+  // This function is deprecated in single-routine mode.
+  // The routine is always implicitly active.
+  console.warn("setActiveRoutine called in single-routine mode. This has no effect.");
+  state.currentRoutineId = id; // Still update currentRoutineId for consistency
   await loadWeeks();
-  showView('routine-detail');
+  showView('routines'); // Show the routine detail
 }
 
 export async function deleteRoutine(id) {
-  if (!confirm("¿Eliminar rutina?")) return;
-  await dbQuery("DELETE FROM routines WHERE id = ?", [id]);
-  // Cleanup cascade ideally handled by DB but manual here:
-  await dbQuery("DELETE FROM weeks WHERE routine_id = ?", [id]);
-  // ... (exercises cleanup skipped for brevity/sqlite weak ref)
-
-  state.routines = state.routines.filter(r => r.id !== id);
-  renderRoutinesList();
+  // This function is deprecated in single-routine mode.
+  // The main routine cannot be deleted.
+  console.warn("deleteRoutine called in single-routine mode. The main routine cannot be deleted.");
+  alert("No puedes eliminar la rutina principal.");
 }
 
 export async function loadWeeks() {
@@ -492,12 +471,15 @@ export async function loadWeeks() {
     state.weeks = res.results[0].response.result.rows.map(r => ({ id: parseInt(r[0].value), name: r[1].value }));
   }
 
-  if (state.weeks.length > 0) {
+  // If no weeks, verify if we need to migrate VERY old data (from before 'weeks' table exist? No, assuming standard structure)
+  // If purely empty, create Week 1
+  if (state.weeks.length === 0) {
+    await createWeek("Semana 1", state.currentRoutineId, true);
+  } else {
+    // Select last week by default
     state.currentWeekId = state.weeks[state.weeks.length - 1].id;
-    await loadDayTitles(); // Load titles for this week
+    await loadDayTitles();
     await loadExercises();
-    renderWeekSelector();
-    renderDaySelector();
   }
 }
 
@@ -508,23 +490,14 @@ export async function createWeek(name, routineId = null, useDefault = false) {
   const newWeekId = parseInt(res.results[0].response.result.last_insert_rowid);
 
   let copied = false;
-
   if (!useDefault && state.weeks.length > 0) {
-    // Copy from last week
     const lastWeekId = state.weeks[state.weeks.length - 1].id;
-
-    // Copy Titles
-    await dbQuery(`INSERT INTO day_titles (week_id, day_index, title, day_order) 
-                   SELECT ?, day_index, title, day_order FROM day_titles WHERE week_id = ?`, [newWeekId, lastWeekId]);
-
-    // Copy Exercises (resetting stats)
-    await dbQuery(`INSERT INTO exercises (week_id, day_index, name, sets, weight, order_index, completed) 
-                   SELECT ?, day_index, name, sets, weight, order_index, 0 FROM exercises WHERE week_id = ?`, [newWeekId, lastWeekId]);
+    await dbQuery(`INSERT INTO day_titles (week_id, day_index, title, day_order) SELECT ?, day_index, title, day_order FROM day_titles WHERE week_id = ?`, [newWeekId, lastWeekId]);
+    await dbQuery(`INSERT INTO exercises (week_id, day_index, name, sets, weight, order_index, completed) SELECT ?, day_index, name, sets, weight, order_index, 0 FROM exercises WHERE week_id = ?`, [newWeekId, lastWeekId]);
     copied = true;
   }
 
   if (!copied && useDefault) {
-    // Seed Default
     const inserts = [];
     DEFAULT_ROUTINE.forEach((d, i) => {
       inserts.push({ sql: "INSERT INTO day_titles (week_id, day_index, title, day_order) VALUES (?, ?, ?, ?)", args: [newWeekId, d.day, d.title, i] });
@@ -535,15 +508,11 @@ export async function createWeek(name, routineId = null, useDefault = false) {
     await dbBatch(inserts);
   }
 
-  if (routineId === state.currentRoutineId || !routineId) {
-    state.weeks.push({ id: newWeekId, name });
-    state.currentWeekId = newWeekId;
-    await loadDayTitles();
-    await loadExercises();
-    renderWeekSelector();
-    renderDaySelector();
-    renderRoutine();
-  }
+  state.weeks.push({ id: newWeekId, name });
+  state.currentWeekId = newWeekId;
+  await loadDayTitles();
+  await loadExercises();
+  if (state.currentView === 'routines') renderRoutineDetail();
 }
 
 export async function createEmptyWeek(name, routineId, numDays) {
@@ -766,7 +735,10 @@ function updateSyncStatus(syncing) {
 export function showView(view) {
   state.currentView = view;
   document.querySelectorAll('[id$="-view"]').forEach(el => el.style.display = 'none');
-  const viewEl = document.getElementById(`${view}-view`);
+
+  // MAPPING: 'routines' view now shows the DETAIL content directly
+  let targetId = view === 'routines' ? 'routine-detail-view' : `${view}-view`;
+  const viewEl = document.getElementById(targetId);
   if (viewEl) viewEl.style.display = 'block';
 
   document.querySelectorAll('.bottom-nav-item').forEach(b => {
@@ -774,47 +746,18 @@ export function showView(view) {
   });
 
   if (view === 'dashboard') renderDashboard();
-  if (view === 'routines') renderRoutinesList();
+  if (view === 'routines') renderRoutineDetail(); // Direct render
   if (view === 'profile') renderProfile();
-  if (view === 'routine-detail') {
-    renderRoutineDetail();
-  }
 }
 
-export function renderRoutinesList() {
-  const container = document.getElementById('routines-list-content');
-  if (!container) return;
-
-  const routinesList = state.routines || [];
-
-  container.innerHTML = `
-      <h2 class="view-title">Mis Rutinas (${routinesList.length}/3)</h2>
-      <div class="routines-list">
-        ${routinesList.length === 0 ?
-      `<div style="text-align:center; padding:40px; color:var(--text-secondary);">
-               <p>No tienes rutinas creadas.</p>
-             </div>`
-      : routinesList.map(r => `
-          <div class="routine-card ${r.isActive ? 'active-routine' : ''}">
-            <div class="routine-header"><div><div class="routine-name">${r.isActive ? '⭐ ' : ''}${r.name}</div><div class="routine-meta">${r.numDays} días</div></div></div>
-            <div class="routine-actions">
-              ${!r.isActive ? `<button onclick="window.setActiveRoutine(${r.id})" class="secondary-btn">Activar</button>` : ''}
-              <button onclick="window.setActiveRoutine(${r.id});" class="secondary-btn">Ver</button>
-              ${!r.isActive ? `<button onclick="window.deleteRoutine(${r.id})" class="danger-btn-small">Borrar</button>` : ''}
-            </div>
-          </div>
-        `).join('')}
-      </div>
-      ${routinesList.length < 3 ? `<button onclick="window.showCreateRoutineModal()" class="add-routine-btn"><span>➕</span> Nueva Rutina</button>` : ''}
-    `;
-}
+// Deprecated multi-routine list - Removed to avoid confusion
+export function renderRoutinesList() { return; }
 
 export function renderRoutineDetail() {
-  const container = document.getElementById('routine-detail-content');
-  if (container) {
-    const r = state.routines.find(i => i.id === state.currentRoutineId);
-    container.innerHTML = `<div class="routine-detail-header"><button onclick="window.showView('routines')" class="back-btn">← Mis Rutinas</button><h2>${r ? r.name : 'Rutina'}</h2></div>`;
-  }
+  // Use the routines-list-content container? No, use routine-detail-view
+  // But we need to ensure the elements exist.
+  // The HTML structure has #routine-detail-view.
+
   renderWeekSelector();
   renderDaySelector();
   renderRoutine();
