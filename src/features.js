@@ -399,16 +399,13 @@ export async function updateTodaySteps() {
 // ============================================
 
 export async function loadRoutines() {
-  // Force Single Routine Mode
-  // 1. Get or Create the ONE routine
-  let res = await dbQuery("SELECT id, name FROM routines WHERE user_id = ? LIMIT 1", [state.currentUser.id]);
-
+  // 1. Get or Create the Main Routine
   let mainRoutineId;
+  const res = await dbQuery("SELECT id FROM routines WHERE user_id = ? LIMIT 1", [state.currentUser.id]);
 
   if (res && res.results[0].type === 'ok' && res.results[0].response.result.rows.length > 0) {
     mainRoutineId = parseInt(res.results[0].response.result.rows[0][0].value);
   } else {
-    // Create Default
     const now = new Date().toISOString();
     const createRes = await dbQuery("INSERT INTO routines (user_id, name, is_active, num_days, created_at) VALUES (?, ?, ?, ?, ?)",
       [state.currentUser.id, "Mi Rutina", 1, 4, now]);
@@ -417,15 +414,17 @@ export async function loadRoutines() {
 
   state.currentRoutineId = mainRoutineId;
 
-  // 2. FORCE MIGRATION: Link ALL weeks of this user to this routine
-  // This fixes the "Lucy's routine disappeared" issue by gathering any stray weeks
-  await dbQuery("UPDATE weeks SET routine_id = ? WHERE user_id = ?", [mainRoutineId, state.currentUser.id]);
+  // 2. MIGRATION: Link orphan weeks to this routine
+  // This brings back old data that didn't have a routine_id
+  await dbQuery("UPDATE weeks SET routine_id = ? WHERE user_id = ? AND (routine_id IS NULL OR routine_id = '')",
+    [mainRoutineId, state.currentUser.id]);
 
-  // 3. Load weeks for this Main Routine
+  // 3. Load weeks
   await loadWeeks();
 
-  // If we are on routines view, render it now
-  if (state.currentView === 'routines') renderRoutineDetail();
+  if (state.currentView === 'routines' || state.currentView === 'routine-detail') {
+    renderRoutineDetail();
+  }
 }
 
 export async function createDefaultRoutine() {
@@ -794,30 +793,38 @@ export async function confirmCreateRoutine() {
 // Drag Handlers (Simplified for brevity but functional)
 export function handlePointerDown(e, id, index) {
   if (e.target.closest('button') || e.target.closest('input')) return;
+
   dragTarget = e.currentTarget;
-  dragStartY = e.clientY;
+  // Fallback for touch/mouse
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+  dragStartY = clientY;
   dragStartIndex = index;
   isDragging = true;
   dragTarget.classList.add('dragging');
   document.body.classList.add('is-dragging');
 
-  // Attach listeners
   window.addEventListener('pointermove', handlePointerMove);
   window.addEventListener('pointerup', handlePointerUp);
+  window.addEventListener('touchmove', handlePointerMove, { passive: false });
+  window.addEventListener('touchend', handlePointerUp);
 }
 
 function handlePointerMove(e) {
   if (!isDragging) return;
-  e.preventDefault();
-  const delta = e.clientY - dragStartY;
+  e.preventDefault(); // Prevent scroll
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  const delta = clientY - dragStartY;
   dragTarget.style.transform = `translate3d(0, ${delta}px, 0)`;
 }
 
 async function handlePointerUp(e) {
   isDragging = false;
   document.body.classList.remove('is-dragging');
-  dragTarget.classList.remove('dragging');
-  dragTarget.style.transform = '';
+  if (dragTarget) {
+    dragTarget.classList.remove('dragging');
+    dragTarget.style.transform = '';
+  }
 
   // Calculate new index based on position (naive implementation for now, or just keep visual)
   // For production quality, full DND logic from main.js should be preserved. 
@@ -825,6 +832,8 @@ async function handlePointerUp(e) {
 
   window.removeEventListener('pointermove', handlePointerMove);
   window.removeEventListener('pointerup', handlePointerUp);
+  window.removeEventListener('touchmove', handlePointerMove);
+  window.removeEventListener('touchend', handlePointerUp);
 }
 
 
