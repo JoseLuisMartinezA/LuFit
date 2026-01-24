@@ -872,45 +872,44 @@ initApp();
 let deferredPrompt;
 const installBtn = document.getElementById('pwa-install-btn');
 
-// Check if device is iOS
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 // Check if app is already installed/in standalone mode
-const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+  window.navigator.standalone === true ||
+  document.referrer.includes('android-app://');
 
 function showInstallButton() {
+  console.log('Checking installation status:', { isStandalone });
   if (installBtn && !isStandalone) {
-    installBtn.style.display = 'inline-block';
+    installBtn.style.setProperty('display', 'inline-block', 'important');
+    console.log('Showing install button');
   }
 }
 
+// Show button on load by default if not standalone
+window.addEventListener('DOMContentLoaded', showInstallButton);
+// Also call it immediately in case DOM is already loaded
+showInstallButton();
+
 // Android / Chrome desktop logic
 window.addEventListener('beforeinstallprompt', (e) => {
+  console.log('beforeinstallprompt fired');
   e.preventDefault();
   deferredPrompt = e;
   showInstallButton();
 });
 
-// iOS specific logic (iOS doesn't fire beforeinstallprompt)
-if (isIOS && !isStandalone) {
-  showInstallButton();
-}
-
 if (installBtn) {
   installBtn.addEventListener('click', async () => {
     if (deferredPrompt) {
-      // Android / Chrome / Windows prompt
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
         installBtn.style.display = 'none';
         deferredPrompt = null;
       }
-    } else if (isIOS) {
-      // iOS Manual instructions
-      alert("Para instalar LuFit en tu iPhone:\n\n1. Pulsa el botón 'Compartir' (el cuadrado con una flecha hacia arriba).\n2. Selecciona la opción 'Añadir a pantalla de inicio'.\n3. ¡Listo! Ya tendrás LuFit en tu escritorio.");
     } else {
-      // Other browsers/fallback
-      alert("Para instalar esta App, busca la opción 'Instalar' o 'Añadir a pantalla de inicio' en el menú de tu navegador.");
+      // Fallback/iOS Instructions
+      alert("Para instalar LuFit en tu móvil:\n\n📱 iPhone: Pulsa 'Compartir' y 'Añadir a pantalla de inicio'.\n\n🤖 Android: Pulsa los tres puntos del navegador y selecciona 'Instalar aplicación' o 'Añadir a pantalla de inicio'.");
     }
   });
 }
@@ -920,11 +919,10 @@ window.addEventListener('appinstalled', () => {
   deferredPrompt = null;
 });
 
-// Register Service Worker with relative path for better compatibility
+// Register Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    const swPath = import.meta.env.DEV ? '/sw.js' : './sw.js';
-    navigator.serviceWorker.register(swPath)
+    navigator.serviceWorker.register('/sw.js')
       .then(reg => console.log('SW registered!', reg))
       .catch(err => console.log('SW registration failed:', err));
   });
