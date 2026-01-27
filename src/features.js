@@ -839,12 +839,6 @@ export async function saveExercise() {
 
 export async function toggleExercise(id, status) {
   await dbQuery("UPDATE exercises SET completed = ? WHERE id = ?", [!status, id]);
-
-  // Trigger Smart Timer if completing a set
-  if (!status) {
-    startRestTimer(60); // Default 60s
-  }
-
   await loadExercises();
 }
 
