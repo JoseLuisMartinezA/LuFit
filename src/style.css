@@ -1715,6 +1715,8 @@ body {
   align-items: center;
   gap: 8px;
   transition: var(--transition);
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .routine-chip.active {
