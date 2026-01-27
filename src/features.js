@@ -200,24 +200,42 @@ export function toggleAccountMenu(event) {
 // ============================================
 
 export function showProfileSetup() {
+  // Use existing modal structure for consistent styling
+  const isEditing = !!state.userProfile;
+  const modalId = 'profile-setup-modal';
+  const existing = document.getElementById(modalId);
+  if (existing) existing.remove();
+
   const html = `
-    <div class="profile-setup-screen">
-      <div class="profile-setup-card">
-        <img src="favicon.png" alt="LuFit" class="login-logo">
-        <h2>👋 ¡Bienvenido a LuFit!</h2>
-        <p>Completa tu perfil para personalizar tu experiencia</p>
-        <div class="profile-setup-form">
-          <div class="input-group"><label>Peso (kg)</label><input type="number" id="profile-weight" placeholder="70" step="0.1"></div>
-          <div class="input-group"><label>Altura (cm)</label><input type="number" id="profile-height" placeholder="170"></div>
-          <div class="input-group"><label>Edad</label><input type="number" id="profile-age" placeholder="25"></div>
-          <div class="input-group"><label>Género</label>
-            <select id="profile-gender">
-              <option value="">Selecciona...</option><option value="male">Masculino</option><option value="female">Femenino</option><option value="other">Otro</option>
-            </select>
+    <div class="modal" id="${modalId}" style="display: flex;">
+      <div class="modal-content">
+        <div class="modal-header">
+           <div style="display:flex; align-items:center; gap:12px;">
+             <img src="favicon.png" alt="LuFit" style="height:32px;">
+             <h3 style="margin:0;">${isEditing ? 'Editar Perfil' : 'Bienvenido a LuFit'}</h3>
+           </div>
+           ${isEditing ? `<button class="close-modal" onclick="document.getElementById('${modalId}').remove()">×</button>` : ''}
+        </div>
+        <div class="modal-body">
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 20px;">
+            ${isEditing ? 'Actualiza tus datos corporales para recalcular tus estadísticas.' : 'Completa tu perfil para personalizar tu experiencia.'}
+          </p>
+          <div class="profile-setup-form" style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="input-group"><label>Peso (kg)</label><input type="number" id="profile-weight" value="${state.userProfile?.weight || ''}" placeholder="Ej: 70" step="0.1"></div>
+            <div class="input-group"><label>Altura (cm)</label><input type="number" id="profile-height" value="${state.userProfile?.height || ''}" placeholder="Ej: 170"></div>
+            <div class="input-group"><label>Edad</label><input type="number" id="profile-age" value="${state.userProfile?.age || ''}" placeholder="Ej: 25"></div>
+            <div class="input-group"><label>Género</label>
+              <select id="profile-gender" style="background: rgba(255, 255, 255, 0.04); border: 1px solid var(--panel-border); padding: 14px; border-radius: 12px; color: white; outline: none; font-size: 16px;">
+                <option value="">Selecciona...</option>
+                <option value="male" ${state.userProfile?.gender === 'male' ? 'selected' : ''}>Masculino</option>
+                <option value="female" ${state.userProfile?.gender === 'female' ? 'selected' : ''}>Femenino</option>
+                <option value="other" ${state.userProfile?.gender === 'other' ? 'selected' : ''}>Otro</option>
+              </select>
+            </div>
+            <div class="input-group"><label>Meta de pasos diarios</label><input type="number" id="profile-steps-goal" value="${state.userProfile?.stepsGoal || '10000'}" step="1000"></div>
+            <p id="profile-error" class="login-error" style="margin:0; min-height:0;"></p>
+            <button onclick="window.saveProfile()" class="primary-btn">${isEditing ? 'Guardar Cambios' : 'Guardar y Continuar'}</button>
           </div>
-          <div class="input-group"><label>Meta de pasos diarios</label><input type="number" id="profile-steps-goal" value="10000" step="1000"></div>
-          <p id="profile-error" class="login-error"></p>
-          <button onclick="window.saveProfile()" class="primary-btn">Guardar y Continuar</button>
         </div>
       </div>
     </div>`;
@@ -238,13 +256,24 @@ export async function saveProfile() {
 
   updateSyncStatus(true);
   const now = new Date().toISOString();
-  await dbQuery("INSERT INTO user_profile (user_id, weight, height, age, gender, daily_steps_goal, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-    [state.currentUser.id, weight, height, age, gender, stepsGoal, now]);
 
-  document.querySelector('.profile-setup-screen').remove();
+  // Check if update or insert
+  const existing = await dbQuery("SELECT user_id FROM user_profile WHERE user_id = ?", [state.currentUser.id]);
+  if (existing && existing.results[0].response.result.rows.length > 0) {
+    await dbQuery("UPDATE user_profile SET weight = ?, height = ?, age = ?, gender = ?, daily_steps_goal = ? WHERE user_id = ?",
+      [weight, height, age, gender, stepsGoal, state.currentUser.id]);
+  } else {
+    await dbQuery("INSERT INTO user_profile (user_id, weight, height, age, gender, daily_steps_goal, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [state.currentUser.id, weight, height, age, gender, stepsGoal, now]);
+  }
+
+  const modal = document.getElementById('profile-setup-modal');
+  if (modal) modal.remove();
+
   await loadUserProfile();
   hideLogin();
   await loadRoutines();
+  showView(state.currentView || 'dashboard');
   updateSyncStatus(false);
 }
 
