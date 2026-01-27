@@ -958,8 +958,10 @@ export function renderRoutineSelector() {
         `).join('')}
       </div>
       ${canAdd ? `<button class="routine-chip add-chip circular-add" 
-                           onclick="window.createRoutinePrompt()" 
-                           oncontextmenu="window.showAddRoutineContextMenu(event)">＋</button>` : ''}
+                           onpointerdown="window.handleAddRoutinePointerDown(event)"
+                           onpointerup="window.handleAddRoutinePointerUp(event)"
+                           onpointercancel="window.handleAddRoutinePointerUp(event)"
+                           oncontextmenu="event.preventDefault()">＋</button>` : ''}
     </div>
     <div class="routine-actions-bar">
        <!-- Removed Clone Button from here, now in context menu -->
@@ -1120,8 +1122,32 @@ window.editRoutineName = editRoutineName;
 window.deleteRoutine = deleteRoutine;
 window.duplicateRoutine = duplicateRoutine;
 
+let addRoutineTimer = null;
+let addRoutineLongPressTriggered = false;
+
+export function handleAddRoutinePointerDown(e) {
+  addRoutineLongPressTriggered = false;
+  addRoutineTimer = setTimeout(() => {
+    addRoutineLongPressTriggered = true;
+    if (navigator.vibrate) navigator.vibrate(50);
+    showAddRoutineContextMenu(e);
+  }, 600); // 600ms for long press
+}
+
+export function handleAddRoutinePointerUp(e) {
+  if (addRoutineTimer) {
+    clearTimeout(addRoutineTimer);
+    addRoutineTimer = null;
+  }
+
+  if (!addRoutineLongPressTriggered) {
+    // It was a short tap
+    createRoutinePrompt();
+  }
+}
+
 export function showAddRoutineContextMenu(event) {
-  event.preventDefault();
+  if (event) event.preventDefault();
   const modalId = 'routine-add-context-menu';
   const existing = document.getElementById(modalId);
   if (existing) existing.remove();
@@ -1129,6 +1155,7 @@ export function showAddRoutineContextMenu(event) {
   const html = `
     <div class="modal context-modal" id="${modalId}" onclick="this.remove()" style="display: flex; background: rgba(0,0,0,0.4);">
       <div class="context-menu-content" onclick="event.stopPropagation()">
+        <div class="context-header" style="padding: 10px 16px; font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Opciones de Rutina</div>
         <button class="context-item" onclick="document.getElementById('${modalId}').remove(); window.createRoutinePrompt()">
            <span class="icon">✨</span> Nueva Rutina
         </button>
@@ -1427,6 +1454,6 @@ if (typeof window !== 'undefined') {
     showCreateRoutineModal, confirmCreateRoutine, addDay, setDay, editDayTitle,
     toggleExercise, openEditModal, openAddModal, deleteExercise, updateWeight, deleteDay,
     handlePointerDown, openAddModal, renderProfile, renderRoutinesList, showAlert, showConfirm, showNamingModal,
-    showAddRoutineContextMenu
+    showAddRoutineContextMenu, handleAddRoutinePointerDown, handleAddRoutinePointerUp
   });
 }
