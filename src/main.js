@@ -1,4 +1,4 @@
-import './style.css'
+import './new-styles.css'
 import { initApp } from './features.js';
 
 // Start App

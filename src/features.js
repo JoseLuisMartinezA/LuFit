@@ -71,7 +71,7 @@ export async function initApp() {
       { sql: 'CREATE TABLE IF NOT EXISTS user_profile (user_id INTEGER PRIMARY KEY, weight REAL, height REAL, age INTEGER, gender TEXT, daily_steps_goal INTEGER DEFAULT 10000, created_at TEXT)' },
       { sql: 'CREATE TABLE IF NOT EXISTS routines (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, name TEXT, is_active INTEGER DEFAULT 0, num_days INTEGER DEFAULT 4, created_at TEXT)' },
       { sql: 'CREATE TABLE IF NOT EXISTS weeks (id INTEGER PRIMARY KEY AUTOINCREMENT, routine_id INTEGER, user_id INTEGER, name TEXT)' },
-      { sql: 'CREATE TABLE IF NOT EXISTS exercises (id INTEGER PRIMARY KEY AUTOINCREMENT, week_id INTEGER, day_index INTEGER, name TEXT, sets TEXT, completed INTEGER DEFAULT 0, weight TEXT DEFAULT \'\', order_index INTEGER DEFAULT 0)' },
+      { sql: 'CREATE TABLE IF NOT EXISTS exercises (id INTEGER PRIMARY KEY AUTOINCREMENT, week_id INTEGER, day_index INTEGER, name TEXT, sets TEXT, completed INTEGER DEFAULT 0, weight TEXT DEFAULT \'\', order_index INTEGER DEFAULT 0, sensation TEXT)' },
       { sql: 'CREATE TABLE IF NOT EXISTS day_titles (week_id INTEGER, day_index INTEGER, title TEXT, day_order INTEGER DEFAULT 0, PRIMARY KEY(week_id, day_index))' },
       { sql: 'CREATE TABLE IF NOT EXISTS daily_steps (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, steps INTEGER, created_at TEXT)' }
     ]);
@@ -93,6 +93,7 @@ export async function initApp() {
     // SCHEMA MIGRATION
     try { await dbQuery("ALTER TABLE weeks ADD COLUMN routine_id INTEGER"); } catch (e) { }
     try { await dbQuery("ALTER TABLE routines ADD COLUMN num_days INTEGER DEFAULT 4"); } catch (e) { }
+    try { await dbQuery("ALTER TABLE exercises ADD COLUMN sensation TEXT"); } catch (e) { }
 
     await loadRoutines();
     await loadUserProfile();
@@ -295,6 +296,7 @@ export async function loadUserProfile() {
 export async function renderDashboard() {
   if (!state.userProfile) await loadUserProfile();
   const todaySteps = await getTodaySteps();
+  const history = await getStepsHistory();
   const stepProgress = Math.min((todaySteps / state.userProfile.stepsGoal) * 100, 100);
 
   const container = document.getElementById('dashboard-content');
@@ -315,6 +317,7 @@ export async function renderDashboard() {
     </div>
 
     <div class="dashboard-main-card">
+       <button class="calendar-btn-trigger" onclick="window.openCalendarModal()">📅</button>
        <div class="steps-circle-container">
           <svg class="steps-progress-ring" width="140" height="140">
              <circle stroke="rgba(255,255,255,0.05)" stroke-width="10" fill="transparent" r="60" cx="70" cy="70"/>
@@ -323,7 +326,7 @@ export async function renderDashboard() {
           </svg>
           <div class="steps-text-center">
              <span class="steps-big-number">${todaySteps.toLocaleString()}</span>
-             <span class="steps-label">Pasos</span>
+             <span class="steps-label">Pasos Hoy</span>
           </div>
        </div>
        <div class="steps-target">Meta: ${state.userProfile.stepsGoal.toLocaleString()}</div>
@@ -353,26 +356,51 @@ export async function renderDashboard() {
        </div>
     </div>
 
-    <div class="dashboard-section manual-steps-section">
+    <div class="dashboard-section">
       <div class="section-header">
-        <h3>⚡ Acciones Rápidas</h3>
+        <h3>👟 Registro de Pasos</h3>
       </div>
-      <div class="quick-actions-grid">
-         <button onclick="window.showView('routines')" class="quick-action-card" style="background: linear-gradient(135deg, #d81b6020, #d81b6005)">
-            <span class="qa-icon">🏋️</span>
-            <span class="qa-text">Ir a Rutina</span>
-         </button>
-         <button onclick="document.getElementById('manual-steps-input').focus()" class="quick-action-card" style="background: linear-gradient(135deg, #ff8a6520, #ff8a6505)">
-            <span class="qa-icon">👟</span>
-            <span class="qa-text">Registrar Pasos</span>
-         </button>
-      </div>
-
       <div class="steps-input-wrapper">
-         <input type="number" id="manual-steps-input" placeholder="Actualizar pasos..." value="${todaySteps > 0 ? todaySteps : ''}">
+         <input type="number" id="manual-steps-input" placeholder="Añadir pasos..." value="${todaySteps > 0 ? todaySteps : ''}">
          <button onclick="window.updateTodaySteps()" class="icon-btn-update">💾</button>
       </div>
-    </div>`;
+
+      ${history.length > 0 ? `
+      <div class="history-list">
+        <h4 class="history-title">Días anteriores</h4>
+        ${history.map(item => `
+          <div class="history-item">
+            <span class="history-date">${formatDateLabel(item.date)}</span>
+            <div class="history-bar-container">
+               <div class="history-bar" style="width: ${Math.min((item.steps / state.userProfile.stepsGoal) * 100, 100)}%"></div>
+            </div>
+            <span class="history-steps">${item.steps.toLocaleString()}</span>
+          </div>
+        `).join('')}
+      </div>
+      ` : ''}
+    </div>
+
+    <div class="dashboard-section tips-dashboard">
+       <div class="section-header">
+         <h3>📌 Tips rápidos</h3>
+       </div>
+       <ul class="tips-list dashboard-tips">
+          <li>
+            <span class="tip-icon">⚖️</span>
+            <p>Usa <strong>peso medio</strong> (las últimas reps deben costar)</p>
+          </li>
+          <li>
+            <span class="tip-icon">✨</span>
+            <p>Prioriza <strong>buena técnica</strong> por encima del peso</p>
+          </li>
+          <li>
+            <span class="tip-icon">📈</span>
+            <p>Intenta <strong>mejorar cada semana</strong> (peso o reps)</p>
+          </li>
+       </ul>
+    </div>
+  `;
 }
 
 export function renderProfile() {
@@ -436,11 +464,123 @@ function getBMICategory(bmi) {
   return "Obesidad";
 }
 
+export async function getStepsHistory() {
+  const res = await dbQuery("SELECT date, steps FROM daily_steps WHERE user_id = ? AND date != ? ORDER BY date DESC LIMIT 7", [state.currentUser.id, new Date().toISOString().split('T')[0]]);
+  if (res && res.results[0].type === 'ok') {
+    return res.results[0].response.result.rows.map(r => ({ date: r[0].value, steps: parseInt(r[1].value) }));
+  }
+  return [];
+}
+
+function formatDateLabel(dateStr) {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diff = Math.floor((now - d) / (1000 * 60 * 60 * 24));
+  if (diff === 1) return "Ayer";
+  return d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' });
+}
+
 export async function getTodaySteps() {
   const today = new Date().toISOString().split('T')[0];
   const res = await dbQuery("SELECT steps FROM daily_steps WHERE user_id = ? AND date = ?", [state.currentUser.id, today]);
-  if (res && res.results[0].type === 'ok' && res.results[0].response.result.rows.length > 0) return parseInt(res.results[0].response.result.rows[0][0].value);
+  if (res && res.results[0].type === 'ok' && res.results[0].response.result.rows.length > 0) {
+    return parseInt(res.results[0].response.result.rows[0][0].value);
+  }
   return 0;
+}
+
+export async function openCalendarModal() {
+  const modalId = 'calendar-modal';
+  const existing = document.getElementById(modalId);
+  if (existing) existing.remove();
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+  const html = `
+    <div class="modal" id="${modalId}" style="display: flex;">
+      <div class="modal-content" style="max-width: 400px; padding: 24px;">
+        <div class="modal-header" style="border:none; padding-bottom:10px; justify-content:space-between;">
+           <h3 style="margin:0; font-size: 1.2rem;">${monthNames[now.getMonth()]} ${currentYear}</h3>
+           <button class="close-modal" onclick="document.getElementById('${modalId}').remove()">×</button>
+        </div>
+        <div class="modal-body" style="padding:0;">
+           <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:8px; margin-bottom:8px; text-align:center;">
+              ${['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(d => `<span style="font-size:0.8rem; color:var(--text-secondary);">${d}</span>`).join('')}
+           </div>
+           <div id="calendar-grid" class="calendar-grid">
+              <!-- Days go here -->
+           </div>
+           
+           <div id="calendar-day-detail" class="calendar-day-detail" style="display:none;"></div>
+        </div>
+      </div>
+    </div>`;
+
+  document.body.insertAdjacentHTML('beforeend', html);
+  await renderCalendar(now.getFullYear(), now.getMonth());
+}
+
+async function renderCalendar(year, month) {
+  const grid = document.getElementById('calendar-grid');
+  if (!grid) return;
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  let firstDay = new Date(year, month, 1).getDay(); // 0Sun - 6Sat
+  // Adjust for Monday start (Spain)
+  // Sun(0)->6, Mon(1)->0, Tue(2)->1
+  firstDay = (firstDay === 0) ? 6 : firstDay - 1;
+
+  const strMonth = (month + 1).toString().padStart(2, '0');
+
+  // Use LIKE for simple prefix match on ISO date
+  const res = await dbQuery("SELECT date, steps FROM daily_steps WHERE user_id = ? AND date LIKE ?", [state.currentUser.id, `${year}-${strMonth}-%`]);
+
+  const stepsMap = {};
+  if (res && res.results[0].type === 'ok') {
+    res.results[0].response.result.rows.forEach(r => {
+      stepsMap[r[0].value] = parseInt(r[1].value);
+    });
+  }
+
+  let html = '';
+  // Empty slots
+  for (let i = 0; i < firstDay; i++) {
+    html += `<div class="calendar-cell empty"></div>`;
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${year}-${strMonth}-${day.toString().padStart(2, '0')}`;
+    const steps = stepsMap[dateStr] || 0;
+    const hasSteps = steps > 0;
+    const opacity = hasSteps ? Math.min(1, Math.max(0.3, steps / state.userProfile.stepsGoal)) : 0;
+
+    html += `
+       <div class="calendar-cell" onclick="window.showCalendarDayDetail('${dateStr}', ${steps})">
+          <span class="day-number">${day}</span>
+          ${hasSteps ? `<div class="step-dot" style="opacity: ${opacity}"></div>` : ''}
+       </div>
+     `;
+  }
+  grid.innerHTML = html;
+}
+
+export function showCalendarDayDetail(dateStr, steps) {
+  const detailEl = document.getElementById('calendar-day-detail');
+  if (!detailEl) return;
+
+  const d = new Date(dateStr);
+  const dateDisplay = d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  detailEl.style.display = 'flex';
+  detailEl.innerHTML = `
+      <div class="detail-circle">
+         <span class="detail-steps">${steps.toLocaleString()}</span>
+         <span class="detail-label">Pasos</span>
+      </div>
+      <div class="detail-date">${dateDisplay}</div>
+   `;
 }
 
 export async function updateTodaySteps() {
@@ -679,12 +819,13 @@ export async function loadExercises() {
   // Fallback if dayTitles empty?
   if (Object.keys(state.dayTitles).length === 0) await loadDayTitles();
 
-  const res = await dbQuery("SELECT id, day_index, name, sets, completed, weight, order_index FROM exercises WHERE week_id = ? AND day_index = ? ORDER BY order_index ASC", [state.currentWeekId, state.currentDay]);
+  const res = await dbQuery("SELECT id, day_index, name, sets, completed, weight, order_index, sensation FROM exercises WHERE week_id = ? AND day_index = ? ORDER BY order_index ASC", [state.currentWeekId, state.currentDay]);
   state.currentExercises = [];
   if (res && res.results[0].type === 'ok') {
     state.currentExercises = res.results[0].response.result.rows.map(r => ({
       id: parseInt(r[0].value), day: parseInt(r[1].value), name: r[2].value, sets: r[3].value,
-      completed: parseInt(r[4].value) === 1, weight: r[5].value || "", order_index: parseInt(r[6].value)
+      completed: parseInt(r[4].value) === 1, weight: r[5].value || "", order_index: parseInt(r[6].value),
+      sensation: r[7].value || null
     }));
   }
   renderRoutine();
@@ -799,10 +940,13 @@ export function renderRoutine() {
       <h2>${displayTitle}</h2>
     </div>
     <div class="exercise-list">
-      ${state.currentExercises.map((ex, idx) => `
-        <div class="exercise-card ${ex.completed ? 'completed' : ''}" 
+      ${state.currentExercises.map((ex, idx) => {
+    const feedbackColors = { 'excessive': '#ff5252', 'optimal': '#ffca28', 'light': '#4caf50' };
+    const borderColor = ex.sensation ? feedbackColors[ex.sensation] : (ex.completed ? 'transparent' : color);
+    return `
+        <div class="exercise-card ${ex.completed ? 'completed' : ''}"
              data-index="${idx}" data-id="${ex.id}"
-             style="border-left: 4px solid ${ex.completed ? 'transparent' : color}"
+             style="border-left: 4px solid ${borderColor}"
              onpointerdown="window.handlePointerDown(event, ${ex.id}, ${idx}, 'exercise')">
           <div class="exercise-main" onclick="window.toggleExercise(${ex.id}, ${ex.completed})">
             <div class="exercise-info">
@@ -819,7 +963,8 @@ export function renderRoutine() {
              <input type="text" placeholder="Peso (kg)" value="${ex.weight}" onchange="window.updateWeight(${ex.id}, this.value)" onclick="event.stopPropagation()">
           </div>
         </div>
-      `).join('')}
+      `;
+  }).join('')}
     </div>
     <button class="add-ex-bottom-btn" onclick="window.openAddModal()"><span>＋</span> Añadir Ejercicio</button>
   `;
@@ -867,8 +1012,68 @@ export async function saveExercise() {
 }
 
 export async function toggleExercise(id, status) {
-  await dbQuery("UPDATE exercises SET completed = ? WHERE id = ?", [!status, id]);
-  await loadExercises();
+  const newStatus = !status;
+
+  if (newStatus) {
+    await dbQuery("UPDATE exercises SET completed = ? WHERE id = ?", [newStatus, id]);
+    await showFeedbackModal(id);
+  } else {
+    // If unmarking, reset sensation so the color returns to native/transparent
+    await dbQuery("UPDATE exercises SET completed = ?, sensation = NULL WHERE id = ?", [0, id]);
+    await loadExercises();
+  }
+}
+
+export async function showFeedbackModal(exerciseId) {
+  return new Promise((resolve) => {
+    const modalId = 'feedback-modal';
+    const existing = document.getElementById(modalId);
+    if (existing) existing.remove();
+
+    const html = `
+      <div class="modal" id="${modalId}" style="display: flex;">
+        <div class="modal-content feedback-modal">
+          <div class="modal-header">
+             <h3>¿Cómo has sentido este ejercicio?</h3>
+             <button class="close-modal">×</button>
+          </div>
+          <div class="modal-body">
+             <div class="feedback-options">
+                <button class="feedback-option excessive" data-val="excessive">
+                   <span class="option-title">Esfuerzo Excesivo</span>
+                   <span class="option-subtitle">Considera bajar un poco el peso para mantener la técnica.</span>
+                </button>
+                <button class="feedback-option optimal" data-val="optimal">
+                   <span class="option-title">Esfuerzo Óptimo</span>
+                   <span class="option-subtitle">¡Genial! Mantén este peso hasta que sientas que el ejercicio se vuelve ligero.</span>
+                </button>
+                <button class="feedback-option light" data-val="light">
+                   <span class="option-title">Esfuerzo Ligero</span>
+                   <span class="option-subtitle">¡Muy bien! Es el momento ideal para aumentar un poco la carga la próxima vez.</span>
+                </button>
+             </div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', html);
+
+    const closeModal = () => {
+      document.getElementById(modalId).remove();
+      loadExercises(); // Refresh to show color
+      resolve();
+    };
+
+    document.querySelectorAll('.feedback-option').forEach(btn => {
+      btn.onclick = async () => {
+        const val = btn.dataset.val;
+        await dbQuery("UPDATE exercises SET sensation = ? WHERE id = ?", [val, exerciseId]);
+        closeModal();
+      };
+    });
+
+    document.querySelector(`#${modalId} .close-modal`).onclick = closeModal;
+  });
 }
 
 export async function updateWeight(id, val) {
@@ -1483,6 +1688,6 @@ if (typeof window !== 'undefined') {
     showCreateRoutineModal, confirmCreateRoutine, addDay, setDay, editDayTitle,
     toggleExercise, openEditModal, openAddModal, deleteExercise, updateWeight, deleteDay,
     handlePointerDown, openAddModal, renderProfile, renderRoutinesList, showAlert, showConfirm, showNamingModal,
-    showAddRoutineContextMenu, handleAddRoutinePointerDown, handleAddRoutinePointerUp
+    showAddRoutineContextMenu, handleAddRoutinePointerDown, handleAddRoutinePointerUp, openCalendarModal, showCalendarDayDetail
   });
 }
