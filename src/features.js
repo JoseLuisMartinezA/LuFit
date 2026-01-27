@@ -963,10 +963,12 @@ export function renderRoutineSelector() {
             </div>
         `).join('')}
       </div>
-      ${canAdd ? `<button class="routine-chip add-chip circular-add" onclick="window.createRoutinePrompt()">＋</button>` : ''}
+      ${canAdd ? `<button class="routine-chip add-chip circular-add" 
+                           onclick="window.createRoutinePrompt()" 
+                           oncontextmenu="window.showAddRoutineContextMenu(event)">＋</button>` : ''}
     </div>
     <div class="routine-actions-bar">
-       ${state.routines.length > 0 ? `<button class="clone-routine-btn" onclick="window.duplicateRoutine(${state.currentRoutineId})">Clonar Rutina</button>` : ''}
+       <!-- Removed Clone Button from here, now in context menu -->
     </div>
   `;
 }
@@ -1123,6 +1125,27 @@ window.createRoutinePrompt = createRoutinePrompt;
 window.editRoutineName = editRoutineName;
 window.deleteRoutine = deleteRoutine;
 window.duplicateRoutine = duplicateRoutine;
+
+export function showAddRoutineContextMenu(event) {
+  event.preventDefault();
+  const modalId = 'routine-add-context-menu';
+  const existing = document.getElementById(modalId);
+  if (existing) existing.remove();
+
+  const html = `
+    <div class="modal context-modal" id="${modalId}" onclick="this.remove()" style="display: flex; background: rgba(0,0,0,0.4);">
+      <div class="context-menu-content" onclick="event.stopPropagation()">
+        <button class="context-item" onclick="document.getElementById('${modalId}').remove(); window.createRoutinePrompt()">
+           <span class="icon">✨</span> Nueva Rutina
+        </button>
+        <button class="context-item" onclick="document.getElementById('${modalId}').remove(); window.duplicateRoutine(${state.currentRoutineId})">
+           <span class="icon">👯</span> Clonar Actual
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
 
 export function showCreateRoutineModal() {
   const html = `
@@ -1409,6 +1432,7 @@ if (typeof window !== 'undefined') {
     toggleAccountMenu, updateTodaySteps, showView, setActiveRoutine, deleteRoutine,
     showCreateRoutineModal, confirmCreateRoutine, addDay, setDay, editDayTitle,
     toggleExercise, openEditModal, openAddModal, deleteExercise, updateWeight, deleteDay,
-    handlePointerDown, openAddModal, renderProfile, renderRoutinesList, showAlert, showConfirm, showNamingModal
+    handlePointerDown, openAddModal, renderProfile, renderRoutinesList, showAlert, showConfirm, showNamingModal,
+    showAddRoutineContextMenu
   });
 }

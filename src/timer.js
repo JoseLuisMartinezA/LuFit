@@ -224,10 +224,10 @@ export function renderTimerUI() {
             </div>
             
             <div class="timer-circle-container">
-               <svg class="timer-progress-ring" width="160" height="160">
-                 <circle class="timer-progress-ring__bg" stroke="rgba(255,255,255,0.05)" stroke-width="6" fill="transparent" r="70" cx="80" cy="80"/>
-                 <circle class="timer-progress-ring__circle" stroke="var(--lu-pink)" stroke-width="6" fill="transparent" r="70" cx="80" cy="80" 
-                    style="stroke-dasharray: 440; stroke-dashoffset: 440; transition: stroke-dashoffset 0.5s linear;"/>
+               <svg class="timer-progress-ring" width="120" height="120">
+                 <circle class="timer-progress-ring__bg" stroke="rgba(255,255,255,0.05)" stroke-width="6" fill="transparent" r="52" cx="60" cy="60"/>
+                 <circle class="timer-progress-ring__circle" stroke="var(--lu-pink)" stroke-width="6" fill="transparent" r="52" cx="60" cy="60" 
+                    style="stroke-dasharray: 326.7; stroke-dashoffset: 326.7; transition: stroke-dashoffset 0.5s linear;"/>
                </svg>
                <div class="timer-time-display" id="timer-big-time">00:00</div>
             </div>
