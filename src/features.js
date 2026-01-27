@@ -1,5 +1,6 @@
 import { dbQuery, dbBatch } from './db.js';
 import { state, setCurrentUser } from './state.js';
+import { initTimer, startRestTimer } from './timer.js';
 
 // ============================================
 // CONFIG & CONSTANTS
@@ -95,6 +96,7 @@ export async function initApp() {
 
     await loadRoutines();
     await loadUserProfile();
+    initTimer();
     showView('dashboard');
   } catch (err) {
     console.error("Init failed", err);
@@ -264,37 +266,83 @@ export async function loadUserProfile() {
 export async function renderDashboard() {
   if (!state.userProfile) await loadUserProfile();
   const todaySteps = await getTodaySteps();
-  const activeRoutine = state.routines.find(r => r.isActive);
+  const stepProgress = Math.min((todaySteps / state.userProfile.stepsGoal) * 100, 100);
+
   const container = document.getElementById('dashboard-content');
   if (!container) return;
 
   container.innerHTML = `
-    <h2 class="view-title">Dashboard</h2>
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon">👟</div>
-        <div class="stat-value">${todaySteps.toLocaleString()}</div>
-        <div class="stat-label">Pasos Hoy</div>
-        <div class="stat-progress"><div class="stat-progress-bar" style="width: ${Math.min((todaySteps / state.userProfile.stepsGoal) * 100, 100)}%"></div></div>
+    <div class="dashboard-header-new">
+      <div class="brand-area">
+          <img src="favicon.png" alt="LuFit" class="brand-logo">
+          <div class="brand-text">
+            <h1>LuFit</h1>
+            <span>Smart Fitness</span>
+          </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-icon">⚖️</div>
-        <div class="stat-value">${state.userProfile.weight} kg</div>
-        <div class="stat-label">Peso Actual</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">📊</div>
-        <div class="stat-value">${state.userProfile.bmi}</div>
-        <div class="stat-label">IMC</div>
+      <div class="user-welcome">
+         Hola, <strong>${state.currentUser.username}</strong>
       </div>
     </div>
-    <div class="dashboard-section">
-      <h3>📈 Progreso de Pasos (Manual)</h3>
-      <div class="steps-input-section">
-        <input type="number" id="manual-steps-input" placeholder="Pasos hoy" value="${todaySteps}">
-        <button onclick="window.updateTodaySteps()" class="secondary-btn">Actualizar</button>
+
+    <div class="dashboard-main-card">
+       <div class="steps-circle-container">
+          <svg class="steps-progress-ring" width="140" height="140">
+             <circle stroke="rgba(255,255,255,0.05)" stroke-width="10" fill="transparent" r="60" cx="70" cy="70"/>
+             <circle stroke="var(--lu-orange)" stroke-width="10" fill="transparent" r="60" cx="70" cy="70"
+                     style="stroke-dasharray: ${2 * Math.PI * 60}; stroke-dashoffset: ${2 * Math.PI * 60 * (1 - stepProgress / 100)}"/>
+          </svg>
+          <div class="steps-text-center">
+             <span class="steps-big-number">${todaySteps.toLocaleString()}</span>
+             <span class="steps-label">Pasos</span>
+          </div>
+       </div>
+       <div class="steps-target">Meta: ${state.userProfile.stepsGoal.toLocaleString()}</div>
+    </div>
+    
+    <div class="stats-grid-new">
+       <div class="stat-card-new">
+          <div class="stat-icon-new">⚖️</div>
+          <div class="stat-info-new">
+             <span class="stat-label-new">Peso</span>
+             <span class="stat-value-new">${state.userProfile.weight} <span>kg</span></span>
+          </div>
+       </div>
+       <div class="stat-card-new">
+          <div class="stat-icon-new">📏</div>
+          <div class="stat-info-new">
+             <span class="stat-label-new">Altura</span>
+             <span class="stat-value-new">${state.userProfile.height} <span>cm</span></span>
+          </div>
+       </div>
+       <div class="stat-card-new">
+          <div class="stat-icon-new">📊</div>
+          <div class="stat-info-new">
+             <span class="stat-label-new">IMC</span>
+             <span class="stat-value-new">${state.userProfile.bmi}</span>
+          </div>
+       </div>
+    </div>
+
+    <div class="dashboard-section manual-steps-section">
+      <div class="section-header">
+        <h3>⚡ Acciones Rápidas</h3>
       </div>
-      <p style="font-size:0.8em; color:var(--text-secondary); margin-top:8px;">* El seguimiento automático requiere app nativa. Usa este campo para tu control.</p>
+      <div class="quick-actions-grid">
+         <button onclick="window.showView('routines')" class="quick-action-card" style="background: linear-gradient(135deg, #d81b6020, #d81b6005)">
+            <span class="qa-icon">🏋️</span>
+            <span class="qa-text">Ir a Rutina</span>
+         </button>
+         <button onclick="document.getElementById('manual-steps-input').focus()" class="quick-action-card" style="background: linear-gradient(135deg, #ff8a6520, #ff8a6505)">
+            <span class="qa-icon">👟</span>
+            <span class="qa-text">Registrar Pasos</span>
+         </button>
+      </div>
+
+      <div class="steps-input-wrapper">
+         <input type="number" id="manual-steps-input" placeholder="Actualizar pasos..." value="${todaySteps > 0 ? todaySteps : ''}">
+         <button onclick="window.updateTodaySteps()" class="icon-btn-update">💾</button>
+      </div>
     </div>`;
 }
 
@@ -390,27 +438,33 @@ export async function updateTodaySteps() {
 // ============================================
 
 export async function loadRoutines() {
-  // 1. Get or Create the Main Routine
-  let mainRoutineId;
-  const res = await dbQuery("SELECT id FROM routines WHERE user_id = ? LIMIT 1", [state.currentUser.id]);
+  // 1. Get All Routines (Limit 3)
+  const res = await dbQuery("SELECT id, name FROM routines WHERE user_id = ? ORDER BY id ASC LIMIT 3", [state.currentUser.id]);
 
+  state.routines = [];
   if (res && res.results[0].type === 'ok' && res.results[0].response.result.rows.length > 0) {
-    mainRoutineId = parseInt(res.results[0].response.result.rows[0][0].value);
+    state.routines = res.results[0].response.result.rows.map(r => ({
+      id: parseInt(r[0].value),
+      name: r[1].value
+    }));
   } else {
     const now = new Date().toISOString();
     const createRes = await dbQuery("INSERT INTO routines (user_id, name, is_active, num_days, created_at) VALUES (?, ?, ?, ?, ?)",
-      [state.currentUser.id, "Mi Rutina", 1, 4, now]);
-    mainRoutineId = parseInt(createRes.results[0].response.result.last_insert_rowid);
+      [state.currentUser.id, "Rutina 1", 1, 4, now]);
+    const newId = parseInt(createRes.results[0].response.result.last_insert_rowid);
+    state.routines = [{ id: newId, name: "Rutina 1" }];
   }
 
-  state.currentRoutineId = mainRoutineId;
+  // Set default active if none
+  if (!state.currentRoutineId || !state.routines.find(r => r.id === state.currentRoutineId)) {
+    state.currentRoutineId = state.routines[0].id;
+  }
 
-  // 2. MIGRATION: Link orphan weeks to this routine
-  // This brings back old data that didn't have a routine_id
+  // 2. MIGRATION: Link orphan weeks to the FIRST routine
   await dbQuery("UPDATE weeks SET routine_id = ? WHERE user_id = ? AND (routine_id IS NULL OR routine_id = '')",
-    [mainRoutineId, state.currentUser.id]);
+    [state.routines[0].id, state.currentUser.id]);
 
-  // 3. Load weeks
+  // 3. Load weeks for current routine
   await loadWeeks();
 
   if (state.currentView === 'routines' || state.currentView === 'routine-detail') {
@@ -418,38 +472,104 @@ export async function loadRoutines() {
   }
 }
 
-export async function createDefaultRoutine() {
-  // This function is effectively deprecated as loadRoutines now handles default creation
-  // but keeping it as a no-op for now to avoid breaking potential external calls.
-  // The new loadRoutines ensures a single routine exists.
-}
+export async function createRoutine(name = "Nueva Rutina") {
+  if (state.routines.length >= 3) {
+    showAlert("Has alcanzado el límite de 3 rutinas.");
+    return;
+  }
 
-export async function createRoutine(name, numDays, isDefault = false) {
-  // This function is largely deprecated for multi-routine creation.
-  // The only path for routine creation is now through loadRoutines for the single main routine.
-  // If this is called, it will create a routine, but it won't be the "active" one in the single-routine model.
-  // For now, we'll make it create a routine but not set it as current or load weeks for it.
-  // The single routine model doesn't support multiple routines.
-  console.warn("createRoutine called in single-routine mode. This might not behave as expected.");
   const now = new Date().toISOString();
-  await dbQuery("INSERT INTO routines (user_id, name, is_active, num_days, created_at) VALUES (?, ?, ?, ?, ?)",
-    [state.currentUser.id, name, 0, numDays, now]); // Always inactive in this model
+  // Name auto-increment if not provided or default?
+  // If we want specific names:
+  const newName = name || `Rutina ${state.routines.length + 1}`;
+
+  const res = await dbQuery("INSERT INTO routines (user_id, name, is_active, num_days, created_at) VALUES (?, ?, ?, ?, ?)",
+    [state.currentUser.id, newName, 1, 4, now]);
+
+  if (res && res.results[0].type === 'ok') {
+    const newId = parseInt(res.results[0].response.result.last_insert_rowid);
+    // Create default week for it?
+    await createWeek("Semana 1", newId, true);
+
+    await loadRoutines();
+    setActiveRoutine(newId);
+  }
 }
 
 export async function setActiveRoutine(id) {
-  // This function is deprecated in single-routine mode.
-  // The routine is always implicitly active.
-  console.warn("setActiveRoutine called in single-routine mode. This has no effect.");
-  state.currentRoutineId = id; // Still update currentRoutineId for consistency
+  state.currentRoutineId = id;
   await loadWeeks();
-  showView('routines'); // Show the routine detail
+  renderRoutineDetail();
 }
 
 export async function deleteRoutine(id) {
-  // This function is deprecated in single-routine mode.
-  // The main routine cannot be deleted.
-  console.warn("deleteRoutine called in single-routine mode. The main routine cannot be deleted.");
-  alert("No puedes eliminar la rutina principal.");
+  if (state.routines.length <= 1) {
+    showAlert("Debes tener al menos una rutina.");
+    return;
+  }
+  if (!await showConfirm("¿Eliminar esta rutina y todos sus datos?", "Eliminar Rutina", { isDanger: true, confirmText: "Eliminar" })) return;
+
+  updateSyncStatus(true);
+  // Delete hierarchy: Exercises -> DayTitles -> Weeks -> Routine
+  // Getting weeks first
+  const weeksRes = await dbQuery("SELECT id FROM weeks WHERE routine_id = ?", [id]);
+  if (weeksRes && weeksRes.results[0].type === 'ok') {
+    const weekIds = weeksRes.results[0].response.result.rows.map(r => r[0].value);
+    for (const wId of weekIds) {
+      await dbQuery("DELETE FROM exercises WHERE week_id = ?", [wId]);
+      await dbQuery("DELETE FROM day_titles WHERE week_id = ?", [wId]);
+    }
+  }
+  await dbQuery("DELETE FROM weeks WHERE routine_id = ?", [id]);
+  await dbQuery("DELETE FROM routines WHERE id = ?", [id]);
+
+  state.currentRoutineId = null; // Forces loadRoutines to pick default
+  await loadRoutines();
+  updateSyncStatus(false);
+}
+
+export async function duplicateRoutine(id) {
+  if (state.routines.length >= 3) {
+    showAlert("Límite de rutinas alcanzado (3/3).");
+    return;
+  }
+
+  const original = state.routines.find(r => r.id === id);
+  if (!original) return;
+
+  const newName = original.name + " (Copia)";
+
+  // 1. Create Routine
+  const now = new Date().toISOString();
+  const res = await dbQuery("INSERT INTO routines (user_id, name, is_active, num_days, created_at) VALUES (?, ?, ?, ?, ?)",
+    [state.currentUser.id, newName, 1, 4, now]);
+  const newRoutineId = parseInt(res.results[0].response.result.last_insert_rowid);
+
+  // 2. Fetch Weeks
+  const weeksRes = await dbQuery("SELECT id, name FROM weeks WHERE routine_id = ?", [id]);
+  if (weeksRes && weeksRes.results[0].type === 'ok') {
+    const weeks = weeksRes.results[0].response.result.rows;
+    for (const w of weeks) {
+      const oldWId = parseInt(w[0].value);
+      const wName = w[1].value;
+
+      // Create Week
+      const wRes = await dbQuery("INSERT INTO weeks (routine_id, user_id, name) VALUES (?, ?, ?)",
+        [newRoutineId, state.currentUser.id, wName]);
+      const newWId = parseInt(wRes.results[0].response.result.last_insert_rowid);
+
+      // Copy Day Titles
+      await dbQuery("INSERT INTO day_titles (week_id, day_index, title, day_order) SELECT ?, day_index, title, day_order FROM day_titles WHERE week_id = ?",
+        [newWId, oldWId]);
+
+      // Copy Exercises (reset completed to 0)
+      await dbQuery("INSERT INTO exercises (week_id, day_index, name, sets, weight, order_index, completed) SELECT ?, day_index, name, sets, weight, order_index, 0 FROM exercises WHERE week_id = ?",
+        [newWId, oldWId]);
+    }
+  }
+
+  await loadRoutines();
+  setActiveRoutine(newRoutineId);
 }
 
 export async function loadWeeks() {
@@ -489,12 +609,9 @@ export async function createWeek(name, routineId = null, useDefault = false) {
 
   if (!copied && useDefault) {
     const inserts = [];
-    DEFAULT_ROUTINE.forEach((d, i) => {
-      inserts.push({ sql: "INSERT INTO day_titles (week_id, day_index, title, day_order) VALUES (?, ?, ?, ?)", args: [newWeekId, d.day, d.title, i] });
-      d.exs.forEach(ex => {
-        inserts.push({ sql: "INSERT INTO exercises (week_id, day_index, name, sets, order_index) VALUES (?, ?, ?, ?, ?)", args: [newWeekId, d.day, ex.name, ex.sets, 0] });
-      });
-    });
+    for (let i = 1; i <= 4; i++) {
+      inserts.push({ sql: "INSERT INTO day_titles (week_id, day_index, title, day_order) VALUES (?, ?, ?, ?)", args: [newWeekId, i, `Día ${i}`, i - 1] });
+    }
     await dbBatch(inserts);
   }
 
@@ -559,8 +676,37 @@ export function renderWeekSelector() {
   const addBtn = document.getElementById('add-week-btn');
   if (addBtn) {
     addBtn.onclick = async () => {
-      const name = prompt("Nombre semana (ej: Semana 2)");
-      if (name) await createWeek(name);
+      showNamingModal("Nueva Semana", "", async (name) => {
+        if (name) await createWeek(name);
+      });
+    }
+  }
+
+  const deleteBtn = document.getElementById('delete-week-btn');
+  if (deleteBtn) {
+    deleteBtn.onclick = async () => {
+      if (state.weeks.length <= 1) return showAlert("Mínimo una semana.");
+      if (await showConfirm("¿Borrar semana?", "Borrar Semana", { isDanger: true, confirmText: "Borrar" })) {
+        await dbQuery("DELETE FROM weeks WHERE id = ?", [state.currentWeekId]);
+        await dbQuery("DELETE FROM day_titles WHERE week_id = ?", [state.currentWeekId]);
+        await dbQuery("DELETE FROM exercises WHERE week_id = ?", [state.currentWeekId]);
+        await loadWeeks();
+        renderRoutineDetail();
+      }
+    }
+  }
+
+  const renameBtn = document.getElementById('rename-week-btn');
+  if (renameBtn) {
+    renameBtn.onclick = async () => {
+      const week = state.weeks.find(w => w.id === state.currentWeekId);
+      showNamingModal("Renombrar Semana", week.name, async (name) => {
+        if (name) {
+          await dbQuery("UPDATE weeks SET name = ? WHERE id = ?", [name, state.currentWeekId]);
+          await loadWeeks();
+          renderRoutineDetail();
+        }
+      });
     }
   }
 }
@@ -693,6 +839,12 @@ export async function saveExercise() {
 
 export async function toggleExercise(id, status) {
   await dbQuery("UPDATE exercises SET completed = ? WHERE id = ?", [!status, id]);
+
+  // Trigger Smart Timer if completing a set
+  if (!status) {
+    startRestTimer(60); // Default 60s
+  }
+
   await loadExercises();
 }
 
@@ -701,7 +853,7 @@ export async function updateWeight(id, val) {
 }
 
 export async function deleteExercise(id) {
-  if (confirm("¿Borrar ejercicio?")) {
+  if (await showConfirm("¿Borrar ejercicio?", "Borrar Ejercicio", { isDanger: true, confirmText: "Borrar" })) {
     await dbQuery("DELETE FROM exercises WHERE id = ?", [id]);
     await loadExercises();
   }
@@ -709,20 +861,21 @@ export async function deleteExercise(id) {
 
 export async function editDayTitle() {
   const curr = state.dayTitles[state.currentDay];
-  const newT = prompt("Nuevo nombre:", curr);
-  if (newT) {
-    await dbQuery("UPDATE day_titles SET title = ? WHERE week_id = ? AND day_index = ?", [newT, state.currentWeekId, state.currentDay]);
-    state.dayTitles[state.currentDay] = newT;
-    renderRoutine();
-  }
+  showNamingModal("Renombrar Día", curr, async (newT) => {
+    if (newT) {
+      await dbQuery("UPDATE day_titles SET title = ? WHERE week_id = ? AND day_index = ?", [newT, state.currentWeekId, state.currentDay]);
+      state.dayTitles[state.currentDay] = newT;
+      renderRoutine();
+    }
+  });
 }
 
 export async function deleteDay() {
   if (Object.keys(state.dayTitles).length <= 1) {
-    alert("No puedes eliminar el único día de la semana.");
+    showAlert("No puedes eliminar el único día de la semana.");
     return;
   }
-  if (!confirm(`¿Eliminar por completo el día ${state.currentDay} y todos sus ejercicios?`)) return;
+  if (!await showConfirm(`¿Eliminar por completo el día ${state.currentDay} y todos sus ejercicios?`, "Eliminar Día", { isDanger: true, confirmText: "Eliminar" })) return;
 
   updateSyncStatus(true);
   try {
@@ -775,14 +928,201 @@ export function showView(view) {
 export function renderRoutinesList() { return; }
 
 export function renderRoutineDetail() {
-  // Use the routines-list-content container? No, use routine-detail-view
-  // But we need to ensure the elements exist.
-  // The HTML structure has #routine-detail-view.
+  // Insert or update routine selector
+  renderRoutineSelector();
 
   renderWeekSelector();
   renderDaySelector();
   renderRoutine();
 }
+
+export function renderRoutineSelector() {
+  const parent = document.getElementById('routine-detail-view');
+  if (!parent) return;
+
+  let container = document.getElementById('routine-tabs-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'routine-tabs-container';
+    container.className = 'routine-tabs-container';
+    parent.insertBefore(container, parent.firstChild);
+  }
+
+  const canAdd = state.routines.length < 3;
+
+  container.innerHTML = `
+    <div class="routines-selector-wrapper">
+      <div class="chk-routines-scroll">
+        ${state.routines.map(r => `
+            <div class="routine-chip ${r.id === state.currentRoutineId ? 'active' : ''}" onclick="window.setActiveRoutine(${r.id})">
+               <span>${r.name}</span>
+               ${r.id === state.currentRoutineId ?
+      `<button class="chip-action" onclick="event.stopPropagation(); window.editRoutineName(event, ${r.id})">✏️</button>` : ''}
+                ${state.routines.length > 1 && r.id === state.currentRoutineId ?
+      `<button class="chip-action danger" onclick="event.stopPropagation(); window.deleteRoutine(${r.id})">×</button>` : ''}
+            </div>
+        `).join('')}
+      </div>
+      ${canAdd ? `<button class="routine-chip add-chip circular-add" onclick="window.createRoutinePrompt()">＋</button>` : ''}
+    </div>
+    <div class="routine-actions-bar">
+       ${state.routines.length > 0 ? `<button class="clone-routine-btn" onclick="window.duplicateRoutine(${state.currentRoutineId})">Clonar Rutina</button>` : ''}
+    </div>
+  `;
+}
+
+export async function editRoutineName(e, id) {
+  e.stopPropagation();
+  const r = state.routines.find(x => x.id === id);
+  showNamingModal("Renombrar Rutina", r.name, async (newName) => {
+    if (newName && newName !== r.name) {
+      await dbQuery("UPDATE routines SET name = ? WHERE id = ?", [newName, id]);
+      await loadRoutines();
+    }
+  });
+}
+
+export async function createRoutinePrompt() {
+  showNamingModal("Nueva Rutina", "", async (name) => {
+    if (name) {
+      await createRoutine(name);
+    }
+  });
+}
+
+/**
+ * Custom Styled Modals (replaces window.alert, window.confirm, window.prompt)
+ */
+
+export function showAlert(message, title = "Aviso") {
+  return new Promise((resolve) => {
+    const modalId = 'lufit-alert-modal';
+    const existing = document.getElementById(modalId);
+    if (existing) existing.remove();
+
+    const html = `
+      <div class="modal" id="${modalId}" style="display: flex;">
+        <div class="modal-content alert-modal">
+          <div class="modal-header">
+             <h3>${title}</h3>
+             <button class="close-modal">×</button>
+          </div>
+          <div class="modal-body">
+             <p class="modal-message">${message}</p>
+             <button class="primary-btn full-width" id="${modalId}-ok-btn">Aceptar</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', html);
+
+    const closeModal = () => {
+      document.getElementById(modalId).remove();
+      resolve();
+    };
+
+    document.getElementById(`${modalId}-ok-btn`).onclick = closeModal;
+    document.querySelector(`#${modalId} .close-modal`).onclick = closeModal;
+
+    // Auto-focus button
+    document.getElementById(`${modalId}-ok-btn`).focus();
+  });
+}
+
+export function showConfirm(message, title = "Confirmar", options = {}) {
+  const {
+    confirmText = "Confirmar",
+    cancelText = "Cancelar",
+    isDanger = false
+  } = options;
+
+  return new Promise((resolve) => {
+    const modalId = 'lufit-confirm-modal';
+    const existing = document.getElementById(modalId);
+    if (existing) existing.remove();
+
+    const html = `
+      <div class="modal" id="${modalId}" style="display: flex;">
+        <div class="modal-content confirm-modal">
+          <div class="modal-header">
+             <h3>${title}</h3>
+             <button class="close-modal">×</button>
+          </div>
+          <div class="modal-body">
+             <p class="modal-message">${message}</p>
+             <div class="modal-actions-horizontal">
+                <button class="secondary-btn" id="${modalId}-cancel-btn">${cancelText}</button>
+                <button class="${isDanger ? 'danger-btn' : 'primary-btn'}" id="${modalId}-confirm-btn">${confirmText}</button>
+             </div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', html);
+
+    const handleAction = (result) => {
+      document.getElementById(modalId).remove();
+      resolve(result);
+    };
+
+    document.getElementById(`${modalId}-confirm-btn`).onclick = () => handleAction(true);
+    document.getElementById(`${modalId}-cancel-btn`).onclick = () => handleAction(false);
+    document.querySelector(`#${modalId} .close-modal`).onclick = () => handleAction(false);
+  });
+}
+
+export function showNamingModal(title, initialValue, onConfirm) {
+  const modalId = 'naming-modal';
+  const existing = document.getElementById(modalId);
+  if (existing) existing.remove();
+
+  const html = `
+    <div class="modal" id="${modalId}" style="display: flex;">
+      <div class="modal-content">
+        <div class="modal-header">
+           <h3>${title}</h3>
+           <button class="close-modal">×</button>
+        </div>
+        <div class="modal-body">
+           <div class="input-group">
+              <input type="text" id="${modalId}-input" value="${initialValue}" placeholder="Introduce nombre..." autofocus>
+           </div>
+           <button class="primary-btn" id="${modalId}-confirm-btn">Confirmar</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', html);
+
+  const modalEl = document.getElementById(modalId);
+  const input = document.getElementById(modalId + '-input');
+
+  if (input) {
+    input.focus();
+    input.select();
+
+    document.getElementById(modalId + '-confirm-btn').onclick = () => {
+      const val = input.value.trim();
+      if (val) {
+        onConfirm(val);
+        modalEl.remove();
+      }
+    };
+
+    input.onkeyup = (e) => {
+      if (e.key === 'Enter') document.getElementById(modalId + '-confirm-btn').click();
+    };
+  }
+
+  document.querySelector(`#${modalId} .close-modal`).onclick = () => modalEl.remove();
+}
+
+// Make globally available
+window.setActiveRoutine = setActiveRoutine;
+window.createRoutinePrompt = createRoutinePrompt;
+window.editRoutineName = editRoutineName;
+window.deleteRoutine = deleteRoutine;
+window.duplicateRoutine = duplicateRoutine;
 
 export function showCreateRoutineModal() {
   const html = `
@@ -1069,6 +1409,6 @@ if (typeof window !== 'undefined') {
     toggleAccountMenu, updateTodaySteps, showView, setActiveRoutine, deleteRoutine,
     showCreateRoutineModal, confirmCreateRoutine, addDay, setDay, editDayTitle,
     toggleExercise, openEditModal, openAddModal, deleteExercise, updateWeight, deleteDay,
-    handlePointerDown, openAddModal, renderProfile, renderRoutinesList
+    handlePointerDown, openAddModal, renderProfile, renderRoutinesList, showAlert, showConfirm, showNamingModal
   });
 }
