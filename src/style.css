@@ -589,7 +589,6 @@ input {
   background-color: rgba(0, 0, 0, 0.82);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  display: flex;
   align-items: flex-start;
   /* Aligns to top */
   justify-content: center;
