@@ -1307,17 +1307,30 @@ body.is-dragging * {
 .bottom-nav {
   position: fixed;
   bottom: 0;
-  left: 0;
+  left: 50%;
+  transform: translateX(-50%);
   width: 100%;
+  max-width: 600px;
+  border-radius: 20px 20px 0 0;
   background: rgba(18, 18, 21, 0.95);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-left: 1px solid rgba(255, 255, 255, 0.03);
+  border-right: 1px solid rgba(255, 255, 255, 0.03);
   display: flex;
   justify-content: space-around;
   padding: 12px 12px 28px;
   /* Extra padding for iPhone home indicator */
   z-index: 1000;
+}
+
+@media (max-width: 600px) {
+  .bottom-nav {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
 }
 
 .bottom-nav-item {
@@ -1529,52 +1542,7 @@ body.is-dragging * {
   flex: 1;
 }
 
-/* Bottom Nav */
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  background: rgba(18, 18, 21, 0.95);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  display: flex;
-  justify-content: space-around;
-  padding: 12px 12px 28px;
-  /* Extra padding for iPhone home indicator */
-  z-index: 1000;
-}
-
-.bottom-nav-item {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  font-size: 0.75rem;
-  transition: all 0.3s;
-  opacity: 0.7;
-}
-
-.bottom-nav-item svg {
-  width: 24px;
-  height: 24px;
-  stroke-width: 2px;
-}
-
-.bottom-nav-item.active {
-  color: var(--lu-pink);
-  opacity: 1;
-  transform: translateY(-2px);
-}
-
-.bottom-nav-item.active svg {
-  filter: drop-shadow(0 0 8px rgba(216, 27, 96, 0.5));
-}
+/* Bottom Nav styles consolidated above */
 
 
 
@@ -2112,6 +2080,13 @@ body {
   cursor: pointer;
   transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
   border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+@media (min-width: 600px) {
+  .timer-fab {
+    right: calc(50% - 280px);
+    /* Align with the centered column edge */
+  }
 }
 
 .timer-fab:hover {
