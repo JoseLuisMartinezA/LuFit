@@ -1,59 +1,105 @@
 import { dbQuery, dbBatch } from './db.js';
 import { state, setCurrentUser } from './state.js';
 import { initTimer, startRestTimer } from './timer.js';
+import { showAIPlannerModal } from './ai_planner.js';
 
 // ============================================
 // CONFIG & CONSTANTS
 // ============================================
 
-const DEFAULT_ROUTINE = [
-  {
-    day: 1, title: "Pierna & Glúteos",
-    exs: [
-      { name: "Sentadilla", sets: "4 × 10–12" },
-      { name: "Hip Thrust", sets: "4 × 10–12" },
-      { name: "Prensa", sets: "3 × 12" },
-      { name: "Zancadas", sets: "3 × 10 por pierna" },
-      { name: "Extensión de cuádriceps", sets: "3 × 12–15" },
-      { name: "Abducción de cadera", sets: "3 × 15–20" }
-    ]
-  },
-  {
-    day: 2, title: "Espalda & Hombros",
-    exs: [
-      { name: "Jalón al pecho", sets: "4 × 10–12" },
-      { name: "Remo", sets: "3 × 10–12" },
-      { name: "Face Pull", sets: "3 × 12–15" },
-      { name: "Press hombro", sets: "3 × 10–12" },
-      { name: "Elevaciones laterales", sets: "3 × 12–15" },
-      { name: "Plancha abdominal", sets: "3 × 30–45 s" }
-    ]
-  },
-  {
-    day: 3, title: "Pierna & Glúteos (Glúteo focus)",
-    exs: [
-      { name: "Peso muerto rumano", sets: "4 × 10–12" },
-      { name: "Sentadilla sumo", sets: "3 × 12" },
-      { name: "Step‑up al banco", sets: "3 × 10 por pierna" },
-      { name: "Curl femoral", sets: "3 × 12–15" },
-      { name: "Patada de glúteo", sets: "3 × 15" },
-      { name: "Crunch abdominal", sets: "3 × 15–20" }
-    ]
-  },
-  {
-    day: 4, title: "Pecho & Brazos",
-    exs: [
-      { name: "Press pecho", sets: "3 × 10–12" },
-      { name: "Aperturas de pecho", sets: "3 × 12" },
-      { name: "Curl de bíceps", sets: "3 × 10–12" },
-      { name: "Extensión de tríceps", sets: "3 × 10–12" },
-      { name: "Curl martillo", sets: "3 × 12" },
-      { name: "Tríceps en banco", sets: "3 × 12–15" }
-    ]
-  }
+// ============================================
+// CONFIG & CONSTANTS
+// ============================================
+
+// V2 SCHEMA DEFINITION (For Auto-Init)
+const V2_SETUP_SQL = [
+  "DROP TABLE IF EXISTS exercises",
+  "DROP TABLE IF EXISTS day_titles",
+  "DROP TABLE IF EXISTS weeks",
+  "DROP TABLE IF EXISTS routines",
+  "DROP TABLE IF EXISTS user_profile",
+  "DROP TABLE IF EXISTS daily_steps",
+  "DROP TABLE IF EXISTS users",
+  "DROP TABLE IF EXISTS exercise_library",
+
+  "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT, email TEXT, is_verified INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)",
+  "CREATE TABLE user_profile (user_id INTEGER PRIMARY KEY, weight REAL, height REAL, age INTEGER, gender TEXT, daily_steps_goal INTEGER DEFAULT 10000, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(user_id) REFERENCES users(id))",
+  "CREATE TABLE exercise_library (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL, target_muscle TEXT, equipment TEXT, difficulty_level TEXT, video_url TEXT)",
+  "CREATE TABLE routines (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, name TEXT NOT NULL, is_active INTEGER DEFAULT 0, num_days INTEGER DEFAULT 4, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(user_id) REFERENCES users(id))",
+  "CREATE TABLE weeks (id INTEGER PRIMARY KEY AUTOINCREMENT, routine_id INTEGER NOT NULL, user_id INTEGER NOT NULL, name TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(routine_id) REFERENCES routines(id))",
+  "CREATE TABLE day_titles (week_id INTEGER, day_index INTEGER, title TEXT, day_order INTEGER DEFAULT 0, PRIMARY KEY(week_id, day_index), FOREIGN KEY(week_id) REFERENCES weeks(id))",
+  "CREATE TABLE exercises (id INTEGER PRIMARY KEY AUTOINCREMENT, week_id INTEGER NOT NULL, day_index INTEGER NOT NULL, exercise_library_id INTEGER, custom_name TEXT, series_target TEXT, weight REAL, completed INTEGER DEFAULT 0, sensation TEXT, order_index INTEGER DEFAULT 0, FOREIGN KEY(week_id) REFERENCES weeks(id), FOREIGN KEY(exercise_library_id) REFERENCES exercise_library(id))",
+  "CREATE TABLE daily_steps (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, steps INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)"
 ];
 
-// Drag & Drop State - Moved to specific section below
+// TOP 80+ ESSENTIAL EXERCISES (Seed)
+const SEED_LIBRARY_SQL = `
+INSERT INTO exercise_library (name, target_muscle, equipment, difficulty_level) VALUES
+('Press de Banca (Barra)', 'Pecho', 'Barra', 'Intermedio'),
+('Press de Banca (Mancuernas)', 'Pecho', 'Mancuernas', 'Intermedio'),
+('Press Inclinado (Barra)', 'Pecho', 'Barra', 'Intermedio'),
+('Press Inclinado (Mancuernas)', 'Pecho', 'Mancuernas', 'Intermedio'),
+('Aperturas (Mancuernas)', 'Pecho', 'Mancuernas', 'Principiante'),
+('Cruce de Poleas', 'Pecho', 'Polea', 'Intermedio'),
+('Fondos (Dips)', 'Pecho', 'Corporal', 'Intermedio'),
+('Flexiones', 'Pecho', 'Corporal', 'Principiante'),
+('Pullover', 'Pecho', 'Mancuernas', 'Intermedio'),
+
+('Dominadas', 'Espalda', 'Corporal', 'Avanzado'),
+('Jalón al Pecho', 'Espalda', 'Polea', 'Principiante'),
+('Remo con Barra', 'Espalda', 'Barra', 'Intermedio'),
+('Remo con Mancuerna', 'Espalda', 'Mancuernas', 'Intermedio'),
+('Remo en Polea Baja', 'Espalda', 'Polea', 'Intermedio'),
+('Peso Muerto', 'Espalda', 'Barra', 'Avanzado'),
+('Hiperextensiones', 'Espalda', 'Banco', 'Principiante'),
+('Face Pull', 'Hombros', 'Polea', 'Principiante'),
+
+('Sentadilla (Barra)', 'Pierna', 'Barra', 'Avanzado'),
+('Sentadilla Frontal', 'Pierna', 'Barra', 'Avanzado'),
+('Prensa de Piernas', 'Pierna', 'Máquina', 'Principiante'),
+('Sentadilla Hack', 'Pierna', 'Máquina', 'Intermedio'),
+('Extensiones de Cuádriceps', 'Pierna', 'Máquina', 'Principiante'),
+('Zancadas', 'Pierna', 'Mancuernas', 'Intermedio'),
+('Sentadilla Búlgara', 'Pierna', 'Mancuernas', 'Avanzado'),
+('Peso Muerto Rumano', 'Pierna', 'Barra', 'Intermedio'),
+('Curl Femoral Tumbado', 'Pierna', 'Máquina', 'Principiante'),
+('Curl Femoral Sentado', 'Pierna', 'Máquina', 'Principiante'),
+('Hip Thrust', 'Glúteos', 'Barra', 'Intermedio'),
+('Patada de Glúteo', 'Glúteos', 'Polea', 'Intermedio'),
+('Gemelos de Pie', 'Pierna', 'Máquina', 'Principiante'),
+('Gemelos Sentado', 'Pierna', 'Máquina', 'Principiante'),
+
+('Press Militar', 'Hombros', 'Barra', 'Intermedio'),
+('Press Arnold', 'Hombros', 'Mancuernas', 'Intermedio'),
+('Elevaciones Laterales', 'Hombros', 'Mancuernas', 'Principiante'),
+('Elevaciones Frontales', 'Hombros', 'Mancuernas', 'Principiante'),
+('Pájaros', 'Hombros', 'Mancuernas', 'Intermedio'),
+('Remo al Mentón', 'Hombros', 'Barra', 'Intermedio'),
+
+('Curl de Bíceps (Barra)', 'Bíceps', 'Barra', 'Principiante'),
+('Curl de Bíceps (Mancuernas)', 'Bíceps', 'Mancuernas', 'Principiante'),
+('Curl Martillo', 'Bíceps', 'Mancuernas', 'Principiante'),
+('Curl Predicador', 'Bíceps', 'Barra Z', 'Intermedio'),
+('Curl en Polea', 'Bíceps', 'Polea', 'Principiante'),
+
+('Press Francés', 'Tríceps', 'Barra Z', 'Intermedio'),
+('Extensiones de Tríceps', 'Tríceps', 'Polea', 'Principiante'),
+('Fondos entre Bancos', 'Tríceps', 'Corporal', 'Principiante'),
+('Patada de Tríceps', 'Tríceps', 'Mancuernas', 'Intermedio'),
+
+('Plancha', 'Core', 'Corporal', 'Principiante'),
+('Crunch Abdominal', 'Core', 'Corporal', 'Principiante'),
+('Elevación de Piernas', 'Core', 'Corporal', 'Intermedio'),
+('Rueda Abdominal', 'Core', 'Accesorio', 'Avanzado'),
+('Russian Twist', 'Core', 'Mancuernas', 'Intermedio'),
+('Burpees', 'Cardio', 'Corporal', 'Intermedio'),
+('Kettlebell Swing', 'Full Body', 'Kettlebell', 'Intermedio'),
+('Box Jumps', 'Pierna', 'Cajón', 'Intermedio'),
+('Salto a la Comba', 'Cardio', 'Cuerda', 'Principiante'),
+('Correr (Cinta)', 'Cardio', 'Máquina', 'Principiante'),
+('Elíptica', 'Cardio', 'Máquina', 'Principiante');
+`;
+
 let editingExerciseId = null;
 
 
@@ -63,25 +109,39 @@ let editingExerciseId = null;
 
 export async function initApp() {
   updateSyncStatus(true);
-
   try {
-    // Initialize Tables
-    await dbBatch([
-      { sql: 'CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT, email TEXT UNIQUE, is_verified INTEGER DEFAULT 0, verification_code TEXT)' },
-      { sql: 'CREATE TABLE IF NOT EXISTS user_profile (user_id INTEGER PRIMARY KEY, weight REAL, height REAL, age INTEGER, gender TEXT, daily_steps_goal INTEGER DEFAULT 10000, created_at TEXT)' },
-      { sql: 'CREATE TABLE IF NOT EXISTS routines (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, name TEXT, is_active INTEGER DEFAULT 0, num_days INTEGER DEFAULT 4, created_at TEXT)' },
-      { sql: 'CREATE TABLE IF NOT EXISTS weeks (id INTEGER PRIMARY KEY AUTOINCREMENT, routine_id INTEGER, user_id INTEGER, name TEXT)' },
-      { sql: 'CREATE TABLE IF NOT EXISTS exercises (id INTEGER PRIMARY KEY AUTOINCREMENT, week_id INTEGER, day_index INTEGER, name TEXT, sets TEXT, completed INTEGER DEFAULT 0, weight TEXT DEFAULT \'\', order_index INTEGER DEFAULT 0, sensation TEXT)' },
-      { sql: 'CREATE TABLE IF NOT EXISTS day_titles (week_id INTEGER, day_index INTEGER, title TEXT, day_order INTEGER DEFAULT 0, PRIMARY KEY(week_id, day_index))' },
-      { sql: 'CREATE TABLE IF NOT EXISTS daily_steps (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, steps INTEGER, created_at TEXT)' }
-    ]);
+    // === V2 MIGRATION CHECK ===
+    const checkLib = await dbQuery("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='exercise_library'");
+    // Count always returns 1 row. We must check if the value is 0.
+    const countVal = (checkLib && checkLib.results[0].type === 'ok')
+      ? parseInt(checkLib.results[0].response.result.rows[0][0].value)
+      : 0;
+
+    console.log("DB Check: exercise_library count =", countVal);
+
+    if (countVal === 0) {
+      console.log("Initializing LuFit V2 Database (Hard Reset)...");
+      const ops = V2_SETUP_SQL.map(sql => ({ sql: sql }));
+      await dbBatch(ops);
+      // Seed
+      await dbQuery(SEED_LIBRARY_SQL);
+
+      // Clear LocalStorage Auth because users table is gone
+      state.currentUser = null;
+      localStorage.removeItem('lufit_user');
+      console.log("Database V2 Ready.");
+
+      // Force reload to show login screen cleanly
+      location.reload();
+      return;
+    }
 
     if (!state.currentUser) {
       showLogin();
       return;
     }
 
-    // Check Profile
+    // Load Data
     const profileRes = await dbQuery("SELECT * FROM user_profile WHERE user_id = ?", [state.currentUser.id]);
     if (!profileRes || profileRes.results[0].type !== 'ok' || profileRes.results[0].response.result.rows.length === 0) {
       showProfileSetup();
@@ -89,16 +149,11 @@ export async function initApp() {
     }
 
     hideLogin();
-
-    // SCHEMA MIGRATION
-    try { await dbQuery("ALTER TABLE weeks ADD COLUMN routine_id INTEGER"); } catch (e) { }
-    try { await dbQuery("ALTER TABLE routines ADD COLUMN num_days INTEGER DEFAULT 4"); } catch (e) { }
-    try { await dbQuery("ALTER TABLE exercises ADD COLUMN sensation TEXT"); } catch (e) { }
-
     await loadRoutines();
     await loadUserProfile();
     initTimer();
     showView('dashboard');
+
   } catch (err) {
     console.error("Init failed", err);
   } finally {
@@ -355,6 +410,20 @@ export async function renderDashboard() {
           </div>
        </div>
     </div>
+
+     <div class="dashboard-promo">
+       <div class="dashboard-promo-content">
+          <div class="dashboard-promo-text">
+            <h3>Crear Rutina Profesional</h3>
+            <p>Deja que <strong>Lu</strong> analice tus datos y diseñe el plan perfecto para ti.</p>
+          </div>
+          <div class="dashboard-promo-icon">🤖</div>
+       </div>
+       <button onclick="window.showAIPlannerModal()" class="dashboard-promo-btn">
+          ¡Vamos allá! 🚀
+       </button>
+     </div>
+
 
     <div class="dashboard-section">
       <div class="section-header">
@@ -619,9 +688,9 @@ export async function loadRoutines() {
   } else {
     const now = new Date().toISOString();
     const createRes = await dbQuery("INSERT INTO routines (user_id, name, is_active, num_days, created_at) VALUES (?, ?, ?, ?, ?)",
-      [state.currentUser.id, "Rutina 1", 1, 4, now]);
+      [state.currentUser.id, "Rutina Inicial", 1, 4, now]);
     const newId = parseInt(createRes.results[0].response.result.last_insert_rowid);
-    state.routines = [{ id: newId, name: "Rutina 1" }];
+    state.routines = [{ id: newId, name: "Rutina Inicial" }];
   }
 
   // Set default active if none
@@ -731,8 +800,8 @@ export async function duplicateRoutine(id) {
       await dbQuery("INSERT INTO day_titles (week_id, day_index, title, day_order) SELECT ?, day_index, title, day_order FROM day_titles WHERE week_id = ?",
         [newWId, oldWId]);
 
-      // Copy Exercises (reset completed to 0)
-      await dbQuery("INSERT INTO exercises (week_id, day_index, name, sets, weight, order_index, completed) SELECT ?, day_index, name, sets, weight, order_index, 0 FROM exercises WHERE week_id = ?",
+      // Copy Exercises V2
+      await dbQuery("INSERT INTO exercises (week_id, day_index, exercise_library_id, custom_name, series_target, weight, order_index, completed) SELECT ?, day_index, exercise_library_id, custom_name, series_target, weight, order_index, 0 FROM exercises WHERE week_id = ?",
         [newWId, oldWId]);
     }
   }
@@ -772,7 +841,7 @@ export async function createWeek(name, routineId = null, useDefault = false) {
   if (!useDefault && state.weeks.length > 0) {
     const lastWeekId = state.weeks[state.weeks.length - 1].id;
     await dbQuery(`INSERT INTO day_titles (week_id, day_index, title, day_order) SELECT ?, day_index, title, day_order FROM day_titles WHERE week_id = ?`, [newWeekId, lastWeekId]);
-    await dbQuery(`INSERT INTO exercises (week_id, day_index, name, sets, weight, order_index, completed) SELECT ?, day_index, name, sets, weight, order_index, 0 FROM exercises WHERE week_id = ?`, [newWeekId, lastWeekId]);
+    await dbQuery(`INSERT INTO exercises (week_id, day_index, exercise_library_id, custom_name, series_target, weight, order_index, completed) SELECT ?, day_index, exercise_library_id, custom_name, series_target, weight, order_index, 0 FROM exercises WHERE week_id = ?`, [newWeekId, lastWeekId]);
     copied = true;
   }
 
@@ -819,13 +888,26 @@ export async function loadExercises() {
   // Fallback if dayTitles empty?
   if (Object.keys(state.dayTitles).length === 0) await loadDayTitles();
 
-  const res = await dbQuery("SELECT id, day_index, name, sets, completed, weight, order_index, sensation FROM exercises WHERE week_id = ? AND day_index = ? ORDER BY order_index ASC", [state.currentWeekId, state.currentDay]);
+  // V2 JOIN Query
+  const res = await dbQuery(`
+    SELECT e.id, e.day_index, l.name, e.custom_name, e.series_target, e.completed, e.weight, e.order_index, e.sensation 
+    FROM exercises e 
+    LEFT JOIN exercise_library l ON e.exercise_library_id = l.id
+    WHERE e.week_id = ? AND e.day_index = ? 
+    ORDER BY e.order_index ASC`,
+    [state.currentWeekId, state.currentDay]);
+
   state.currentExercises = [];
   if (res && res.results[0].type === 'ok') {
     state.currentExercises = res.results[0].response.result.rows.map(r => ({
-      id: parseInt(r[0].value), day: parseInt(r[1].value), name: r[2].value, sets: r[3].value,
-      completed: parseInt(r[4].value) === 1, weight: r[5].value || "", order_index: parseInt(r[6].value),
-      sensation: r[7].value || null
+      id: parseInt(r[0].value),
+      day: parseInt(r[1].value),
+      name: r[2].value || r[3].value || "Ejercicio", // Library Name or Custom
+      sets: r[4].value,
+      completed: parseInt(r[5].value) === 1,
+      weight: r[6].value || "",
+      order_index: parseInt(r[7].value),
+      sensation: r[8].value || null
     }));
   }
   renderRoutine();
@@ -971,41 +1053,141 @@ export function renderRoutine() {
 }
 
 // Exercise Actions
+// Search & Save V2
+export async function searchExerciseLibrary(query) {
+  if (!query || query.length < 2) return [];
+  const res = await dbQuery("SELECT id, name, target_muscle FROM exercise_library WHERE name LIKE ? LIMIT 10", [`%${query}%`]);
+  if (res && res.results[0].type === 'ok') {
+    return res.results[0].response.result.rows.map(r => ({ id: r[0].value, name: r[1].value, muscle: r[2].value }));
+  }
+  return [];
+}
+
 export function openAddModal() {
   editingExerciseId = null;
-  document.getElementById('modal-title').innerText = "Añadir Ejercicio";
-  document.getElementById('new-ex-name').value = '';
-  document.getElementById('new-ex-sets').value = '';
-  document.getElementById('add-exercise-modal').style.display = 'flex';
+  const modal = document.getElementById('add-exercise-modal');
 
-  // Set onclick to save
-  document.getElementById('save-ex-btn').onclick = saveExercise;
+  // Inject Search UI
+  const body = modal.querySelector('.modal-body');
+  body.innerHTML = `
+    <div class="input-group">
+      <label>Buscar Ejercicio</label>
+      <input type="text" id="ex-search-input" placeholder="Escribe 'Sentadilla'..." autocomplete="off">
+      <div id="ex-search-results" class="search-results-dropdown"></div>
+      <input type="hidden" id="selected-lib-id">
+    </div>
+    <div class="input-group">
+      <label for="new-ex-sets">Series y Repes (Objetivo)</label>
+      <input type="text" id="new-ex-sets" placeholder="Ej: 4 × 10">
+    </div>
+    <button id="save-ex-btn" class="primary-btn" disabled>Guardar Ejercicio</button>
+  `;
+
+  document.getElementById('modal-title').innerText = "Añadir Ejercicio";
+  modal.style.display = 'flex';
+
+  // Setup Search Logic
+  const input = document.getElementById('ex-search-input');
+  const resultsDiv = document.getElementById('ex-search-results');
+  const hiddenId = document.getElementById('selected-lib-id');
+  const saveBtn = document.getElementById('save-ex-btn');
+
+  input.oninput = async (e) => {
+    const q = e.target.value;
+    hiddenId.value = "";
+
+    // Allow custom by default if typed
+    saveBtn.disabled = q.length === 0;
+    saveBtn.innerText = "Guardar (Personalizado)";
+
+    if (q.length < 2) { resultsDiv.innerHTML = ''; return; }
+
+    const items = await searchExerciseLibrary(q);
+
+    if (items.length > 0) {
+      resultsDiv.innerHTML = items.map(i => `
+            <div class="search-item" onclick="window.selectLibItem(${i.id}, '${i.name}')">
+                <strong>${i.name}</strong> <span style="font-size:0.8em; opacity:0.7">(${i.muscle})</span>
+            </div>
+        `).join('');
+    } else {
+      resultsDiv.innerHTML = `<div class="search-item" onclick="window.selectCustom()" style="cursor:pointer; opacity:0.8; font-size: 0.9em; padding: 10px; color: var(--lu-pink);"><em>+ ¿Guardar como personalizado?</em></div>`;
+    }
+  };
+
+  window.selectCustom = () => {
+    resultsDiv.innerHTML = ''; // Hide list
+    saveBtn.disabled = false;
+    saveBtn.innerText = "Guardar (Personalizado)";
+    // Optional: Focus next field
+    document.getElementById('new-ex-sets').focus();
+  };
+
+
+  window.selectLibItem = (id, name) => {
+    input.value = name;
+    hiddenId.value = id;
+    resultsDiv.innerHTML = '';
+    saveBtn.disabled = false;
+    saveBtn.innerText = "Guardar de Biblioteca";
+  };
+
+  saveBtn.onclick = saveExercise;
 }
 
 export function openEditModal(id) {
   const ex = state.currentExercises.find(e => e.id === id);
   if (!ex) return;
   editingExerciseId = id;
-  document.getElementById('modal-title').innerText = "Editar Ejercicio";
-  document.getElementById('new-ex-name').value = ex.name;
-  document.getElementById('new-ex-sets').value = ex.sets;
-  document.getElementById('add-exercise-modal').style.display = 'flex';
+
+  const modal = document.getElementById('add-exercise-modal');
+  const body = modal.querySelector('.modal-body');
+
+  // Edit is simpler: Show Name (Readonly or Editable if custom?)
+  body.innerHTML = `
+    <div class="input-group">
+       <label>Ejercicio</label>
+       <input type="text" value="${ex.name}" disabled style="opacity: 0.7">
+    </div>
+    <div class="input-group">
+      <label>Series y Repes</label>
+      <input type="text" id="new-ex-sets" value="${ex.sets}">
+    </div>
+    <button id="save-ex-btn" class="primary-btn">Actualizar</button>
+  `;
+
+  document.getElementById('modal-title').innerText = "Editar Objetivos";
+  modal.style.display = 'flex';
   document.getElementById('save-ex-btn').onclick = saveExercise;
 }
 
 export async function saveExercise() {
-  const name = document.getElementById('new-ex-name').value.trim();
   const sets = document.getElementById('new-ex-sets').value.trim();
-  if (!name) return;
+  const libId = document.getElementById('selected-lib-id') ? document.getElementById('selected-lib-id').value : null;
+  const customName = document.getElementById('ex-search-input') ? document.getElementById('ex-search-input').value.trim() : null;
+
+  if (!sets) return;
 
   updateSyncStatus(true);
+
   if (editingExerciseId) {
-    await dbQuery("UPDATE exercises SET name = ?, sets = ? WHERE id = ?", [name, sets, editingExerciseId]);
+    // Update Target only
+    await dbQuery("UPDATE exercises SET series_target = ? WHERE id = ?", [sets, editingExerciseId]);
   } else {
+    // Insert New
+    if (!libId && !customName) return;
+
     const order = state.currentExercises.length;
-    await dbQuery("INSERT INTO exercises (week_id, day_index, name, sets, order_index) VALUES (?, ?, ?, ?, ?)",
-      [state.currentWeekId, state.currentDay, name, sets, order]);
+    // V2: Insert Reference OR Custom Name
+    if (libId) {
+      await dbQuery("INSERT INTO exercises (week_id, day_index, exercise_library_id, series_target, order_index) VALUES (?, ?, ?, ?, ?)",
+        [state.currentWeekId, state.currentDay, libId, sets, order]);
+    } else {
+      await dbQuery("INSERT INTO exercises (week_id, day_index, custom_name, series_target, order_index) VALUES (?, ?, ?, ?, ?)",
+        [state.currentWeekId, state.currentDay, customName, sets, order]);
+    }
   }
+
   document.getElementById('add-exercise-modal').style.display = 'none';
   await loadExercises();
   updateSyncStatus(false);
@@ -1077,6 +1259,7 @@ export async function showFeedbackModal(exerciseId) {
 }
 
 export async function updateWeight(id, val) {
+  // val might be string, but column is REAL. SQLite handles '12.5'.
   await dbQuery("UPDATE exercises SET weight = ? WHERE id = ?", [val, id]);
 }
 
@@ -1129,7 +1312,7 @@ export async function deleteDay() {
 // HELPERS
 // ============================================
 
-function updateSyncStatus(syncing) {
+export function updateSyncStatus(syncing) {
   const el = document.getElementById('sync-status');
   if (el) el.innerHTML = syncing ? "🔄 Sincronizando..." : "✨ LuFit Cloud Active";
 }
@@ -1215,11 +1398,36 @@ export async function editRoutineName(e, id) {
 }
 
 export async function createRoutinePrompt() {
-  showNamingModal("Nueva Rutina", "", async (name) => {
-    if (name) {
-      await createRoutine(name);
-    }
-  });
+  const html = `
+    <div class="modal" id="routine-creation-choice-modal" style="display: flex;">
+      <div class="modal-content" style="text-align: center;">
+        <div class="modal-header">
+           <h3 style="margin:0;">Crear Nueva Rutina</h3>
+           <button class="close-modal" onclick="document.getElementById('routine-creation-choice-modal').remove()">×</button>
+        </div>
+        <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px; padding: 20px 20px;">
+           <button class="secondary-btn" 
+              onclick="document.getElementById('routine-creation-choice-modal').remove(); window.showNamingModal('Nueva Rutina', '', async (n) => n && window.createRoutine(n))" 
+              style="padding: 16px; justify-content: center; font-size: 1rem; width: 100%; margin: 0;">
+              📝 Crear Manualmente
+           </button>
+           
+           <div style="display: flex; align-items: center; gap: 10px; margin: 10px 0;">
+              <div style="flex:1; height:1px; background:var(--border-color);"></div>
+              <span style="font-size:0.8rem; opacity:0.6;">O RECOMENDADO</span>
+              <div style="flex:1; height:1px; background:var(--border-color);"></div>
+           </div>
+
+           <button class="primary-btn" 
+              onclick="document.getElementById('routine-creation-choice-modal').remove(); window.showAIPlannerModal()" 
+              style="padding: 16px; justify-content: center; font-size: 1rem; background: linear-gradient(135deg, #8b5cf6, #d946ef); width: 100%; margin: 0;">
+              🤖 Asistente Lu
+           </button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', html);
 }
 
 /**
@@ -1688,6 +1896,6 @@ if (typeof window !== 'undefined') {
     showCreateRoutineModal, confirmCreateRoutine, addDay, setDay, editDayTitle,
     toggleExercise, openEditModal, openAddModal, deleteExercise, updateWeight, deleteDay,
     handlePointerDown, openAddModal, renderProfile, renderRoutinesList, showAlert, showConfirm, showNamingModal,
-    showAddRoutineContextMenu, handleAddRoutinePointerDown, handleAddRoutinePointerUp, openCalendarModal, showCalendarDayDetail
+    showAddRoutineContextMenu, handleAddRoutinePointerDown, handleAddRoutinePointerUp, openCalendarModal, showCalendarDayDetail, showAIPlannerModal, createRoutinePrompt, createRoutine
   });
 }

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informe Técnico - LuFit App</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+            background: #fff;
+        }
+
+        h1 {
+            color: #d81b60;
+            /* LuFit Pink */
+            border-bottom: 2px solid #d81b60;
+            padding-bottom: 10px;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #2c3e50;
+            margin-top: 40px;
+            border-left: 5px solid #d81b60;
+            padding-left: 15px;
+        }
+
+        h3 {
+            color: #34495e;
+            margin-top: 25px;
+        }
+
+        h4 {
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+
+        p,
+        li {
+            font-size: 1.1em;
+        }
+
+        ul {
+            margin-bottom: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        code {
+            background-color: #f8f9fa;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #e83e8c;
+        }
+
+        pre {
+            background-color: #f4f6f7;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid #ddd;
+        }
+
+        .highlight-box {
+            background-color: #fff3e0;
+            border-left: 5px solid #ff9800;
+            padding: 15px;
+            margin: 20px 0;
+            font-style: italic;
+        }
+
+        .print-btn {
+            display: inline-block;
+            background: #333;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-bottom: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        @media print {
+            body {
+                padding: 0;
+                max-width: 100%;
+            }
+
+            .print-btn {
+                display: none;
+            }
+
+            a {
+                text-decoration: none;
+                color: black;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div style="text-align: right;">
+        <button onclick="window.print()" class="print-btn">🖨️ Guardar como PDF</button>
+    </div>
+
+    <h1>Informe Técnico: Análisis Funcional y de Datos</h1>
+    <p><strong>Proyecto:</strong> LuFit App<br>
+        <strong>Fecha:</strong> 28 de Enero, 2026<br>
+        <strong>Propósito:</strong> Guía para diseño de Base de Datos escalable y migración.
+    </p>
+
+    <h2>1. Resumen General del Modelo</h2>
+    <p>La aplicación gestiona el entrenamiento mediante un modelo jerárquico y evolutivo. El seguimiento ("tracking")
+        permite iterar sobre semanas y guardar el progreso granular de cada ejercicio.</p>
+    <p><strong>Jerarquía de Datos:</strong><br>
+        Usuario ➔ Rutinas ➔ Semanas ➔ Días ➔ Ejercicios</p>
+
+    <h2>2. Entidades de Datos y Propiedades Críticas</h2>
+
+    <h3>A. Usuario (<code>users</code>)</h3>
+    <ul>
+        <li>Gestión de identidad y autenticación.</li>
+        <li><strong>Datos:</strong> ID, Username, Email, Password Hash, Verificación.</li>
+    </ul>
+
+    <h3>B. Perfil Métrico (<code>user_profile</code>)</h3>
+    <ul>
+        <li>Almacena datos físicos variables.</li>
+        <li><strong>Datos:</strong> Peso, Altura, Edad, Género, Meta de Pasos.</li>
+        <li><strong>Nota:</strong> Relación 1:1 actual. Para escalabilidad futura, se recomienda historial de peso.</li>
+    </ul>
+
+    <h3>C. Rutinas (<code>routines</code>)</h3>
+    <ul>
+        <li>Contenedor principal del plan de entrenamiento.</li>
+        <li><strong>Funcionalidad:</strong> Soporta múltiples rutinas activas o inactivas.</li>
+        <li><strong>Datos:</strong> Nombre (ej. "Hipertrofia"), Estado activo, Configuración de días base.</li>
+    </ul>
+
+    <h3>D. Semanas (<code>weeks</code>)</h3>
+    <ul>
+        <li>Unidad de periodización temporal.</li>
+        <li><strong>Comportamiento:</strong> Se crean secuencialmente dentro de una Rutina. Permiten comparar progreso
+            entre la "Semana 1" y la "Semana 5" de la misma rutina.</li>
+        <li><strong>Datos:</strong> ID, Nombre, Link a Rutina.</li>
+    </ul>
+
+    <h3>E. Títulos de Día (<code>day_titles</code>)</h3>
+    <ul>
+        <li>Define la estructura semántica de la semana.</li>
+        <li><strong>Ejemplo:</strong> Día 1 = "Pectoral", Día 2 = "Descanso".</li>
+        <li><strong>Datos:</strong> ID Semana, Índice (1-7), Título.</li>
+    </ul>
+
+    <h3>F. Ejercicios (<code>exercises</code>)</h3>
+    <ul>
+        <li>Unidad atómica de seguimiento.</li>
+        <li><strong>Propiedades Clave:</strong>
+            <ul>
+                <li><code>sets</code>: Definición de volumen (actualmente texto libre "4x12").</li>
+                <li><code>weight</code>: Variable principal de progreso (Kilos/Libras).</li>
+                <li><code>completed</code>: Estado de finalización.</li>
+                <li><code>sensation</code>: <strong>Feedback Cualitativo (RPE)</strong>. Valores usados: <em>excessive,
+                        optimal, light</em>.</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h2>3. User Journey y Requisitos de Base de Datos</h2>
+
+    <h3>Gestión de Rutinas y Semanas</h3>
+    <p>El sistema requiere operaciones complejas de clonado:</p>
+    <ul>
+        <li><strong>Duplicar Rutina:</strong> Debe clonar el árbol completo (Semanas > Días > Ejercicios).</li>
+        <li><strong>Nueva Semana:</strong> Al añadir una semana, el sistema pre-carga (copia) la estructura y ejercicios
+            de la semana anterior para continuidad, reseteando los valores de cumplimiento.</li>
+    </ul>
+
+    <h3>Registro de Entrenamiento (Workout Logging)</h3>
+    <p>La BBDD debe estar optimizada para escrituras frecuentes de actualizaciones parciales:</p>
+    <ul>
+        <li>Actualización de carga (<code>weight</code>) en tiempo real.</li>
+        <li>Registro de sensación (<code>sensation</code>) post-ejercicio.</li>
+    </ul>
+
+    <div class="highlight-box">
+        <strong>Punto Crítico de Escalabilidad:</strong><br>
+        Actualmente la estructura de "Semana" crece indefinidamente. Una Rutina de 1 año tendrá 52 semanas hijas, cada
+        una con ~20 ejercicios. La consulta de carga debe optimizarse indexando agresivamente <code>routine_id</code> y
+        <code>week_id</code>.
+    </div>
+
+    <h2>4. Esquema SQL Actual (Referencia)</h2>
+    <pre><code>CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT, ...);
+CREATE TABLE user_profile (user_id INTEGER PRIMARY KEY, weight REAL, ...);
+
+CREATE TABLE routines (
+    id INTEGER PRIMARY KEY, 
+    user_id INTEGER, 
+    name TEXT, 
+    is_active INTEGER DEFAULT 0
+);
+
+CREATE TABLE weeks (
+    id INTEGER PRIMARY KEY, 
+    routine_id INTEGER, 
+    name TEXT
+);
+
+CREATE TABLE day_titles (
+    week_id INTEGER, 
+    day_index INTEGER, 
+    title TEXT
+);
+
+CREATE TABLE exercises (
+    id INTEGER PRIMARY KEY, 
+    week_id INTEGER, 
+    day_index INTEGER, 
+    name TEXT, 
+    sets TEXT,      -- Recomendar atomizar: set_count, rep_range
+    weight TEXT,    -- Recomendar numérico para gráficas
+    completed INTEGER, 
+    sensation TEXT, -- ENUM('excessive', 'optimal', 'light')
+    order_index INTEGER
+);
+
+CREATE TABLE daily_steps (
+    id INTEGER PRIMARY KEY, 
+    user_id INTEGER, 
+    date TEXT, 
+    steps INTEGER
+);</code></pre>
+
+</body>
+
+</html>
