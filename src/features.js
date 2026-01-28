@@ -112,10 +112,12 @@ export async function initApp() {
   try {
     // === V2 MIGRATION CHECK ===
     const checkLib = await dbQuery("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='exercise_library'");
-    // Count always returns 1 row. We must check if the value is 0.
-    const countVal = (checkLib && checkLib.results[0].type === 'ok')
-      ? parseInt(checkLib.results[0].response.result.rows[0][0].value)
-      : 0;
+
+    // Only init if we get a VALID response saying count is 0. 
+    let countVal = -1;
+    if (checkLib && checkLib.results && checkLib.results[0] && checkLib.results[0].type === 'ok') {
+      countVal = parseInt(checkLib.results[0].response.result.rows[0][0].value);
+    }
 
     console.log("DB Check: exercise_library count =", countVal);
 
@@ -143,9 +145,20 @@ export async function initApp() {
 
     // Load Data
     const profileRes = await dbQuery("SELECT * FROM user_profile WHERE user_id = ?", [state.currentUser.id]);
-    if (!profileRes || profileRes.results[0].type !== 'ok' || profileRes.results[0].response.result.rows.length === 0) {
-      showProfileSetup();
-      return;
+
+    // Strict check: Only show setup if query SUCCEEDED but returned NO rows.
+    if (profileRes && profileRes.results[0].type === 'ok') {
+      if (profileRes.results[0].response.result.rows.length === 0) {
+        showProfileSetup();
+        return;
+      }
+    } else if (!profileRes) {
+      // Network error or DB unavail.
+      // Do NOT show profile setup, just stop or retry?
+      console.error("Connection failed.");
+      // Maybe show a retry button in UI? For now, let's not block but we can't render dashboard without profile safely.
+      // We'll let it fall through but renderDashboard checks state.userProfile again.
+      // Actually, renderDashboard calls loadUserProfile which does a query.
     }
 
     hideLogin();
