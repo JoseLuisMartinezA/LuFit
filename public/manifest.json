@@ -1,11 +1,11 @@
 {
-    "name": "LuFit",
+    "name": "LuFit: Rutinas Inteligentes y Personalizadas",
     "short_name": "LuFit",
     "start_url": "./",
     "display": "standalone",
     "background_color": "#08080a",
     "theme_color": "#d81b60",
-    "description": "Tu rutina de gimnasio personalizada.",
+    "description": "Consigue tus rutinas inteligentes y personalizadas con LuFit. La mejor app de fitness para optimizar tu entrenamiento.",
     "icons": [
         {
             "src": "./favicon.png",
