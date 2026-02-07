@@ -108,6 +108,9 @@ let editingExerciseId = null;
 // ============================================
 
 export async function initApp() {
+  // Apply theme
+  document.body.classList.toggle('light-mode', state.theme === 'light');
+
   updateSyncStatus(true);
   try {
     // === V2 MIGRATION CHECK ===
@@ -402,21 +405,18 @@ export async function renderDashboard() {
     
     <div class="stats-grid-new">
        <div class="stat-card-new">
-          <div class="stat-icon-new">⚖️</div>
           <div class="stat-info-new">
              <span class="stat-label-new">Peso</span>
              <span class="stat-value-new">${state.userProfile.weight} <span>kg</span></span>
           </div>
        </div>
        <div class="stat-card-new">
-          <div class="stat-icon-new">📏</div>
           <div class="stat-info-new">
              <span class="stat-label-new">Altura</span>
              <span class="stat-value-new">${state.userProfile.height} <span>cm</span></span>
           </div>
        </div>
        <div class="stat-card-new">
-          <div class="stat-icon-new">📊</div>
           <div class="stat-info-new">
              <span class="stat-label-new">IMC</span>
              <span class="stat-value-new">${state.userProfile.bmi}</span>
@@ -440,7 +440,7 @@ export async function renderDashboard() {
 
     <div class="dashboard-section">
       <div class="section-header">
-        <h3>👟 Registro de Pasos</h3>
+        <h3>Registro de Pasos</h3>
       </div>
       <div class="steps-input-wrapper">
          <input type="number" id="manual-steps-input" placeholder="Añadir pasos..." value="${todaySteps > 0 ? todaySteps : ''}">
@@ -465,7 +465,7 @@ export async function renderDashboard() {
 
     <div class="dashboard-section tips-dashboard">
        <div class="section-header">
-         <h3>📌 Tips rápidos</h3>
+         <h3>Tips rápidos</h3>
        </div>
        <ul class="tips-list dashboard-tips">
           <li>
@@ -527,7 +527,14 @@ export function renderProfile() {
            <div class="stat-value" style="font-size:1.5rem;">${state.userProfile.stepsGoal}</div>
         </div>
       </div>
-      <button onclick="window.showProfileSetup()" class="secondary-btn" style="width:100%; margin-top:16px;">✏️ Editar Datos</button>
+      <button onclick="window.showProfileSetup()" class="secondary-btn" style="width:100%; margin-top:16px;">Editar Datos</button>
+    </div>
+
+    <div class="dashboard-section" style="margin-top:20px;">
+       <h3>Preferencia de Tema</h3>
+       <button onclick="window.toggleTheme()" class="secondary-btn" style="width:100%; justify-content:center; gap: 10px;">
+         ${state.theme === 'dark' ? '☀️ Cambiar a Modo Claro' : '🌙 Cambiar a Modo Oscuro'}
+       </button>
     </div>
 
     <div class="dashboard-section" style="margin-top:20px;">
@@ -1027,21 +1034,23 @@ export function renderRoutine() {
     <div class="day-header">
       <div class="day-header-top">
          <span class="day-tag" style="background: ${color}20; color: ${color}; margin-bottom: 0;">DÍA ${state.currentDay}</span>
+      </div>
+      <div class="day-title-row">
+         <h2>${displayTitle}</h2>
          <div class="day-header-actions">
            <button class="icon-btn-small" onclick="window.editDayTitle()" title="Editar nombre">✏️</button>
            <button class="icon-btn-small delete-day-btn" onclick="window.deleteDay()" title="Eliminar día">🗑️</button>
          </div>
       </div>
-      <h2>${displayTitle}</h2>
     </div>
     <div class="exercise-list">
       ${state.currentExercises.map((ex, idx) => {
-    const feedbackColors = { 'excessive': '#ff5252', 'optimal': '#ffca28', 'light': '#4caf50' };
-    const borderColor = ex.sensation ? feedbackColors[ex.sensation] : (ex.completed ? 'transparent' : color);
+    const feedbackColors = { 'excessive': '#ef4444', 'optimal': '#facc15', 'light': '#22c55e' }; // More vivid Tailwind-like colors
+    const borderStyle = ex.sensation ? `border-left: 4px solid ${feedbackColors[ex.sensation]} !important` : 'border-left: 4px solid transparent !important';
     return `
         <div class="exercise-card ${ex.completed ? 'completed' : ''}"
              data-index="${idx}" data-id="${ex.id}"
-             style="border-left: 4px solid ${borderColor}"
+             style="${borderStyle}"
              onpointerdown="window.handlePointerDown(event, ${ex.id}, ${idx}, 'exercise')">
           <div class="exercise-main" onclick="window.toggleExercise(${ex.id}, ${ex.completed})">
             <div class="exercise-info">
@@ -1327,7 +1336,7 @@ export async function deleteDay() {
 
 export function updateSyncStatus(syncing) {
   const el = document.getElementById('sync-status');
-  if (el) el.innerHTML = syncing ? "🔄 Sincronizando..." : "✨ LuFit Cloud Active";
+  if (el) el.innerHTML = syncing ? "🔄 Sincronizando..." : "";
 }
 
 export function showView(view) {
@@ -1380,10 +1389,10 @@ export function renderRoutineSelector() {
         ${state.routines.map(r => `
             <div class="routine-chip ${r.id === state.currentRoutineId ? 'active' : ''}" onclick="window.setActiveRoutine(${r.id})">
                <span>${r.name}</span>
-               ${r.id === state.currentRoutineId ?
+                ${r.id === state.currentRoutineId ?
       `<button class="chip-action" onclick="event.stopPropagation(); window.editRoutineName(event, ${r.id})">✏️</button>` : ''}
                 ${state.routines.length > 1 && r.id === state.currentRoutineId ?
-      `<button class="chip-action danger" onclick="event.stopPropagation(); window.deleteRoutine(${r.id})">×</button>` : ''}
+      `<button class="chip-action danger" onclick="event.stopPropagation(); window.deleteRoutine(${r.id})">🗑️</button>` : ''}
             </div>
         `).join('')}
       </div>
@@ -1422,7 +1431,7 @@ export async function createRoutinePrompt() {
            <button class="secondary-btn" 
               onclick="document.getElementById('routine-creation-choice-modal').remove(); window.showNamingModal('Nueva Rutina', '', async (n) => n && window.createRoutine(n))" 
               style="padding: 16px; justify-content: center; font-size: 1rem; width: 100%; margin: 0;">
-              📝 Crear Manualmente
+              Crear Manualmente
            </button>
            
            <div style="display: flex; align-items: center; gap: 10px; margin: 10px 0;">
@@ -1434,7 +1443,7 @@ export async function createRoutinePrompt() {
            <button class="primary-btn" 
               onclick="document.getElementById('routine-creation-choice-modal').remove(); window.showAIPlannerModal()" 
               style="padding: 16px; justify-content: center; font-size: 1rem; background: linear-gradient(135deg, #8b5cf6, #d946ef); width: 100%; margin: 0;">
-              🤖 Asistente Lu
+              Asistente Lu
            </button>
         </div>
       </div>
@@ -1569,6 +1578,17 @@ export function showNamingModal(title, initialValue, onConfirm) {
 
   document.querySelector(`#${modalId} .close-modal`).onclick = () => modalEl.remove();
 }
+
+/**
+ * THEME MANAGEMENT
+ */
+export function toggleTheme() {
+  state.theme = state.theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('lufit_theme', state.theme);
+  document.body.classList.toggle('light-mode', state.theme === 'light');
+  renderProfile(); // Refresh profile to update button text
+}
+window.toggleTheme = toggleTheme;
 
 // Make globally available
 window.setActiveRoutine = setActiveRoutine;

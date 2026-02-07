@@ -2,6 +2,7 @@
 
 export const state = {
     currentUser: JSON.parse(localStorage.getItem('lufit_user')) || null,
+    theme: localStorage.getItem('lufit_theme') || 'dark',
     userProfile: null,
     routines: [],
     currentRoutineId: null,

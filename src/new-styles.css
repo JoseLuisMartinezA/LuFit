@@ -60,6 +60,225 @@
   --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Light Mode Overrides */
+body.light-mode {
+  --bg-color: #cbd5e1;
+  /* Base gray background */
+  --panel-color: #f1f5f9;
+  /* Soft gray for panels */
+  --panel-border: #94a3b8;
+  /* Defined borders */
+  --text-primary: #111827;
+  /* Very dark gray, not pure black */
+  --text-secondary: #374151;
+  /* Darker slate gray */
+  background-image:
+    radial-gradient(at 0% 0%, rgba(216, 27, 96, 0.05) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(255, 138, 101, 0.05) 0px, transparent 50%);
+}
+
+/* Global Dark Text enforcement in Light Mode */
+body.light-mode,
+body.light-mode .view-title,
+body.light-mode h1,
+body.light-mode h2,
+body.light-mode h3,
+body.light-mode h4,
+body.light-mode p,
+body.light-mode span,
+body.light-mode div,
+body.light-mode li,
+body.light-mode .search-item span,
+body.light-mode .search-item strong,
+body.light-mode .stat-value,
+body.light-mode .stat-label,
+body.light-mode .steps-big-number,
+body.light-mode .steps-label,
+body.light-mode .timer-time-display,
+body.light-mode .routine-name,
+body.light-mode .routine-meta,
+body.light-mode .exercise-name,
+body.light-mode .exercise-sets,
+body.light-mode .day-tag,
+body.light-mode .history-title,
+body.light-mode .history-date,
+body.light-mode .history-steps,
+body.light-mode .tips-list strong,
+body.light-mode label,
+body.light-mode .week-item span,
+body.light-mode #week-select,
+body.light-mode #week-select option {
+  color: var(--text-primary) !important;
+}
+
+/* Secondary dark text */
+body.light-mode .text-secondary,
+body.light-mode .exercise-sets,
+body.light-mode .routine-meta,
+body.light-mode .stat-label {
+  color: var(--text-secondary) !important;
+  opacity: 1 !important;
+}
+
+/* Button & Active Element Text (Force near-black even on colored bg) */
+body.light-mode .primary-btn,
+body.light-mode .secondary-btn,
+body.light-mode .danger-btn,
+body.light-mode .add-routine-btn,
+body.light-mode .icon-btn-update,
+body.light-mode .timer-btn.primary,
+body.light-mode .routine-chip.active,
+body.light-mode .day-tab.active,
+body.light-mode .routine-chip.add-chip {
+  color: #0c0a09 !important;
+  font-weight: 700 !important;
+}
+
+/* Steps and Exercises Library */
+body.light-mode .steps-input-wrapper input,
+body.light-mode .manual-steps-input,
+body.light-mode #manual-steps-input,
+body.light-mode .search-item strong,
+body.light-mode .search-item {
+  color: #111827 !important;
+}
+
+body.light-mode .search-results-dropdown {
+  background: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+}
+
+body.light-mode .feedback-modal {
+  background: #f1f5f9 !important;
+}
+
+body.light-mode .feedback-option {
+  background: #e2e8f0 !important;
+  border-color: #94a3b8 !important;
+}
+
+body.light-mode .history-bar-container {
+  background: #94a3b8 !important;
+  /* Slightly darker gray for the bar container */
+}
+
+body.light-mode .history-bar {
+  background: var(--lu-gradient) !important;
+}
+
+/* Containers: Grays instead of White */
+body.light-mode .summary-card,
+body.light-mode .stat-card,
+body.light-mode .stat-card-new,
+body.light-mode .login-card,
+body.light-mode .modal-content,
+body.light-mode .quick-action-card,
+body.light-mode .routine-card,
+body.light-mode .history-item,
+body.light-mode .account-dropdown {
+  background: var(--panel-color) !important;
+  border: 1px solid var(--panel-border) !important;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Individualized Exercise Card for Light Mode */
+body.light-mode .exercise-card {
+  background: var(--panel-color) !important;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  /* Subtle border to let bands stand out */
+  border-left-width: 4px !important;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+body.light-mode .exercise-card.completed {
+  background: #e2e8f0 !important;
+  opacity: 0.8;
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+/* Exercise Completed Tick */
+body.light-mode .exercise-card.completed .checkmark {
+  background: var(--lu-pink) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+}
+
+body.light-mode .checkmark {
+  border: 2px solid #94a3b8;
+}
+
+/* Interaction elements: Deeper Grays */
+body.light-mode .secondary-btn,
+body.light-mode .routine-chip:not(.active),
+body.light-mode .day-tab:not(.active),
+body.light-mode .steps-input-wrapper,
+body.light-mode .input-group input,
+body.light-mode .input-group select,
+body.light-mode .exercise-extra input,
+body.light-mode .account-icon-btn,
+body.light-mode #week-select {
+  background: #e2e8f0 !important;
+  border: 1px solid var(--panel-border) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Timer Popup Specifics */
+body.light-mode .timer-card {
+  background: #cbd5e1 !important;
+  /* Darker background for popup */
+  border-color: #94a3b8 !important;
+}
+
+body.light-mode .timer-btn:not(.primary) {
+  background: #ffffff !important;
+  /* Pure white backgrounds as requested */
+  color: #0c0a09 !important;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
+  font-weight: 700 !important;
+}
+
+body.light-mode .timer-btn.primary {
+  background: var(--lu-gradient) !important;
+  color: #0c0a09 !important;
+}
+
+body.light-mode .secondary-btn:hover,
+body.light-mode .day-tab:not(.active):hover,
+body.light-mode .exercise-card:hover,
+body.light-mode .routine-card:hover {
+  background: #cbd5e1 !important;
+}
+
+body.light-mode .bottom-nav {
+  background: rgba(203, 213, 225, 0.98) !important;
+  border-top: 1px solid var(--panel-border) !important;
+}
+
+body.light-mode .day-selector {
+  background: #e2e8f0 !important;
+  border-color: var(--panel-border) !important;
+}
+
+body.light-mode .modal {
+  background-color: rgba(15, 23, 42, 0.4) !important;
+}
+
+/* SVG and Visual Elements */
+body.light-mode .steps-circle-container circle:first-child,
+body.light-mode .timer-progress-ring__bg {
+  stroke: #94a3b8 !important;
+}
+
+body.light-mode .exercise-card.completed {
+  background: #e2e8f0 !important;
+  opacity: 0.8;
+}
+
+/* Login Screen Background Override */
+body.light-mode .login-screen {
+  background: var(--bg-color) !important;
+}
+
 /* Login Screen */
 .login-screen {
   position: fixed;
@@ -822,12 +1041,12 @@ input {
 }
 
 .exercise-extra {
-  padding: 0 16px 16px;
+  padding: 0 16px 12px;
   display: flex;
   align-items: center;
   gap: 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.03);
-  padding-top: 12px;
+  padding-top: 8px;
 }
 
 .exercise-extra input {
@@ -866,6 +1085,11 @@ input {
   font-size: 0.9rem;
 }
 
+.delete-ex-btn {
+  width: 32px;
+  padding: 0;
+}
+
 .edit-ex-btn {
   background: rgba(255, 255, 255, 0.05);
   color: var(--text-secondary);
@@ -890,6 +1114,11 @@ input {
 .edit-ex-btn::before {
   content: '✏️';
   font-size: 0.9rem;
+}
+
+.edit-ex-btn {
+  width: auto;
+  padding: 0 10px;
 }
 
 .day-tab {
@@ -1036,6 +1265,13 @@ body.is-dragging * {
   margin-bottom: 8px;
 }
 
+.day-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+}
+
 .day-tag {
   display: inline-block;
   padding: 4px 12px;
@@ -1063,7 +1299,7 @@ body.is-dragging * {
 }
 
 .exercise-main {
-  padding: 20px;
+  padding: 12px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1086,7 +1322,8 @@ body.is-dragging * {
   color: white;
   font-family: inherit;
   font-size: 0.9rem;
-  width: 100px;
+  width: 140px;
+  /* Lengthened a bit */
   outline: none;
   transition: var(--transition);
 }
