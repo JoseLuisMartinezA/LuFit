@@ -5,10 +5,57 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/png" href="favicon.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>LuFit | Tu Entrenamiento Inteligente</title>
+
+  <!-- SEO Técnico: Optimización de Título y Descripción -->
+  <title>LuFit | Entrenamiento Personalizado y Rutinas Inteligentes de Gimnasio</title>
   <meta name="description"
-    content="LuFit - Tu plataforma de entrenamiento personalizada. Entrena con propósito, mejora tu salud y alcanza tus metas con estilo.">
+    content="LuFit es tu aplicación de entrenamiento personalizada. Diseña rutinas inteligentes, registra tus pasos y alcanza tus metas fitness con planes adaptados a ti por IA.">
+  <meta name="keywords"
+    content="entrenamiento, gimnasio, rutinas, fitness app, pesas, pasos, imc, rutina personalizada">
   <meta name="theme-color" content="#d81b60">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://lufit.vercel.app/">
+  <meta property="og:title" content="LuFit | Entrenamiento Personalizado e Inteligente">
+  <meta property="og:description"
+    content="Diseña tu plan de entrenamiento perfecto con IA. Controla tu progreso, pasos y salud en un solo lugar.">
+  <meta property="og:image" content="https://lufit.vercel.app/app-icon.png">
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="https://lufit.vercel.app/">
+  <meta property="twitter:title" content="LuFit | Tu App de Fitness Inteligente">
+  <meta property="twitter:description"
+    content="Rutinas personalizadas y seguimiento de progreso avanzado para llevar tu entrenamiento al siguiente nivel.">
+  <meta property="twitter:image" content="https://lufit.vercel.app/app-icon.png">
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "LuFit",
+    "operatingSystem": "Web",
+    "applicationCategory": "HealthApplication, FitnessApplication",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "EUR"
+    },
+    "description": "Aplicación web para la gestión de entrenamientos personalizados y seguimiento de actividad física.",
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "5",
+      "ratingCount": "1"
+    }
+  }
+  </script>
+
+  <!-- Rendimiento Técnico -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
 
   <!-- Configuración App iPhone -->
   <link rel="apple-touch-icon" href="app-icon.png">
@@ -16,8 +63,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="LuFit">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="src/new-styles.css">
   <link rel="manifest" href="./manifest.json">
@@ -25,9 +70,14 @@
 </head>
 
 <body>
+  <!-- H1 Semántico Invisible para SEO (No afecta al diseño) -->
+  <h1
+    style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;">
+    LuFit: Plataforma de Entrenamiento Personalizado y Seguimiento Fitness Inteligente</h1>
+
   <div id="login-screen" class="login-screen" style="display: none;">
     <div class="login-card">
-      <img src="favicon.png" alt="LuFit" class="login-logo">
+      <img src="favicon.png" alt="Logotipo de LuFit App" class="login-logo" loading="lazy" decoding="async">
 
       <!-- View: Login -->
       <div id="login-view">

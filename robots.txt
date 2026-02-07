@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /?view=profile
+Disallow: /?view=routines
+
+Sitemap: https://lufit.vercel.app/sitemap.xml

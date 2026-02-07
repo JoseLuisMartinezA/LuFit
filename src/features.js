@@ -376,9 +376,9 @@ export async function renderDashboard() {
   container.innerHTML = `
     <div class="dashboard-header-new">
       <div class="brand-area">
-          <img src="favicon.png" alt="LuFit" class="brand-logo">
+          <img src="favicon.png" alt="LuFit Logo" class="brand-logo" loading="lazy">
           <div class="brand-text">
-            <h1>LuFit</h1>
+            <h2>LuFit</h2>
             <span>Smart Fitness</span>
           </div>
       </div>
@@ -427,7 +427,7 @@ export async function renderDashboard() {
      <div class="dashboard-promo">
        <div class="dashboard-promo-content">
           <div class="dashboard-promo-text">
-            <h3>Crear Rutina Profesional</h3>
+            <h3>Rutinas Personalizadas con IA</h3>
             <p>Deja que <strong>Lu</strong> analice tus datos y diseñe el plan perfecto para ti.</p>
           </div>
           <div class="dashboard-promo-icon">🤖</div>
@@ -494,15 +494,15 @@ export function renderProfile() {
   }
 
   container.innerHTML = `
-    <h2 class="view-title">Mi Perfil</h2>
+    <h2 class="view-title">Configuración de Perfil Fitness</h2>
     
     <div class="summary-card" style="flex-direction:row; align-items:center; text-align:left; margin-bottom:20px; padding:20px;">
-      <div class="account-avatar" style="width:60px; height:60px; font-size:1.5rem;">
-        ${state.currentUser.username.charAt(0).toUpperCase()}
+      <div class="account-avatar" style="width:60px; height:60px; font-size:1.5rem;" aria-label="Avatar de usuario">
+        ${state.currentUser.username.substring(0, 1).toUpperCase()}
       </div>
-      <div style="margin-left:16px;">
-        <h3 style="margin:0;">${state.currentUser.username}</h3>
-        <p style="margin:0; opacity:0.7; font-size:0.9rem;">Usuario LuFit</p>
+      <div style="margin-left:15px;">
+        <h3 style="margin:0; font-size:1.2rem;">${state.currentUser.username}</h3>
+        <p style="margin:2px 0 0; font-size:0.8rem; opacity:0.6;">Miembro de LuFit</p>
       </div>
     </div>
 
