@@ -23,12 +23,14 @@ const V2_SETUP_SQL = [
   "DROP TABLE IF EXISTS exercise_library",
 
   "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT, email TEXT, is_verified INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)",
-  "CREATE TABLE user_profile (user_id INTEGER PRIMARY KEY, weight REAL, height REAL, age INTEGER, gender TEXT, daily_steps_goal INTEGER DEFAULT 10000, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(user_id) REFERENCES users(id))",
+  "CREATE TABLE user_profile (user_id INTEGER PRIMARY KEY, weight REAL, height REAL, age INTEGER, gender TEXT, daily_steps_goal INTEGER DEFAULT 10000, preferred_unit TEXT DEFAULT 'kg', created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(user_id) REFERENCES users(id))",
+  "CREATE TABLE weight_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, weight REAL, date TEXT, unit TEXT, FOREIGN KEY(user_id) REFERENCES users(id))",
   "CREATE TABLE exercise_library (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL, target_muscle TEXT, equipment TEXT, difficulty_level TEXT, video_url TEXT)",
   "CREATE TABLE routines (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, name TEXT NOT NULL, is_active INTEGER DEFAULT 0, num_days INTEGER DEFAULT 4, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(user_id) REFERENCES users(id))",
   "CREATE TABLE weeks (id INTEGER PRIMARY KEY AUTOINCREMENT, routine_id INTEGER NOT NULL, user_id INTEGER NOT NULL, name TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(routine_id) REFERENCES routines(id))",
   "CREATE TABLE day_titles (week_id INTEGER, day_index INTEGER, title TEXT, day_order INTEGER DEFAULT 0, PRIMARY KEY(week_id, day_index), FOREIGN KEY(week_id) REFERENCES weeks(id))",
-  "CREATE TABLE exercises (id INTEGER PRIMARY KEY AUTOINCREMENT, week_id INTEGER NOT NULL, day_index INTEGER NOT NULL, exercise_library_id INTEGER, custom_name TEXT, series_target TEXT, weight REAL, completed INTEGER DEFAULT 0, sensation TEXT, order_index INTEGER DEFAULT 0, FOREIGN KEY(week_id) REFERENCES weeks(id), FOREIGN KEY(exercise_library_id) REFERENCES exercise_library(id))",
+  "CREATE TABLE exercises (id INTEGER PRIMARY KEY AUTOINCREMENT, week_id INTEGER NOT NULL, day_index INTEGER NOT NULL, exercise_library_id INTEGER, custom_name TEXT, series_target INTEGER, reps_target TEXT, weight REAL, unit TEXT DEFAULT 'kg', completed INTEGER DEFAULT 0, sensation TEXT, order_index INTEGER DEFAULT 0, FOREIGN KEY(week_id) REFERENCES weeks(id), FOREIGN KEY(exercise_library_id) REFERENCES exercise_library(id))",
+  "CREATE TABLE exercise_sets (id INTEGER PRIMARY KEY AUTOINCREMENT, exercise_id INTEGER NOT NULL, set_index INTEGER NOT NULL, reps_done INTEGER, weight_done REAL, completed INTEGER DEFAULT 0, sensation TEXT, FOREIGN KEY(exercise_id) REFERENCES exercises(id))",
   "CREATE TABLE daily_steps (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, date TEXT, steps INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)"
 ];
 
@@ -140,6 +142,20 @@ export async function initApp() {
       location.reload();
       return;
     }
+
+    // === V3 MIGRATION: SETS SUPPORT & PER-SET SENSATION ===
+    await dbQuery("CREATE TABLE IF NOT EXISTS exercise_sets (id INTEGER PRIMARY KEY AUTOINCREMENT, exercise_id INTEGER NOT NULL, set_index INTEGER NOT NULL, reps_done INTEGER, weight_done REAL, completed INTEGER DEFAULT 0, sensation TEXT, FOREIGN KEY(exercise_id) REFERENCES exercises(id))");
+
+    // Add columns if they don't exist (Legacy Fix)
+    const tableInfo = await dbQuery("PRAGMA table_info(exercise_sets)");
+    if (tableInfo && tableInfo.results[0].type === 'ok') {
+      const columns = tableInfo.results[0].response.result.rows.map(r => r[1].value);
+      if (!columns.includes('completed')) await dbQuery("ALTER TABLE exercise_sets ADD COLUMN completed INTEGER DEFAULT 0");
+      if (!columns.includes('sensation')) await dbQuery("ALTER TABLE exercise_sets ADD COLUMN sensation TEXT");
+    }
+
+    // === DATA REPAIR: Fix corrupted weight_logs unit values (dates stored as unit) ===
+    await dbQuery("UPDATE weight_logs SET unit = 'kg' WHERE unit != 'kg' AND unit != 'lb'");
 
     if (!state.currentUser) {
       showLogin();
@@ -280,7 +296,7 @@ export function showProfileSetup() {
 
   const html = `
     <div class="modal" id="${modalId}" style="display: flex;">
-      <div class="modal-content">
+      <div class="modal-content glass">
         <div class="modal-header">
            <div style="display:flex; align-items:center; gap:12px;">
              <img src="favicon.png" alt="LuFit" style="height:32px;">
@@ -293,9 +309,17 @@ export function showProfileSetup() {
             ${isEditing ? 'Actualiza tus datos corporales para recalcular tus estadísticas.' : 'Completa tu perfil para personalizar tu experiencia.'}
           </p>
           <div class="profile-setup-form" style="display: flex; flex-direction: column; gap: 16px;">
-            <div class="input-group"><label>Peso (kg)</label><input type="number" id="profile-weight" value="${state.userProfile?.weight || ''}" placeholder="Ej: 70" step="0.1"></div>
-            <div class="input-group"><label>Altura (cm)</label><input type="number" id="profile-height" value="${state.userProfile?.height || ''}" placeholder="Ej: 170"></div>
-            <div class="input-group"><label>Edad</label><input type="number" id="profile-age" value="${state.userProfile?.age || ''}" placeholder="Ej: 25"></div>
+            <div style="display: flex; gap: 12px;">
+              <div class="input-group" style="flex: 2;"><label>Peso</label><input type="number" id="profile-weight" value="${state.userProfile?.weight || ''}" placeholder="70" step="0.1" inputmode="decimal"></div>
+              <div class="input-group" style="flex: 1;"><label>Unidad</label>
+                <select id="profile-unit" style="background: rgba(255, 255, 255, 0.04); border: 1px solid var(--panel-border); padding: 14px; border-radius: 12px; color: white; outline: none; font-size: 16px;">
+                  <option value="kg" ${state.userProfile?.preferredUnit === 'kg' ? 'selected' : ''}>kg</option>
+                  <option value="lb" ${state.userProfile?.preferredUnit === 'lb' ? 'selected' : ''}>lb</option>
+                </select>
+              </div>
+            </div>
+            <div class="input-group"><label>Altura (cm)</label><input type="number" id="profile-height" value="${state.userProfile?.height || ''}" placeholder="170"></div>
+            <div class="input-group"><label>Edad</label><input type="number" id="profile-age" value="${state.userProfile?.age || ''}" placeholder="25"></div>
             <div class="input-group"><label>Género</label>
               <select id="profile-gender" style="background: rgba(255, 255, 255, 0.04); border: 1px solid var(--panel-border); padding: 14px; border-radius: 12px; color: white; outline: none; font-size: 16px;">
                 <option value="">Selecciona...</option>
@@ -320,24 +344,30 @@ export async function saveProfile() {
   const age = parseInt(document.getElementById('profile-age').value);
   const gender = document.getElementById('profile-gender').value;
   const stepsGoal = parseInt(document.getElementById('profile-steps-goal').value);
+  const unit = document.getElementById('profile-unit')?.value || 'kg';
 
   if (!weight || !height || !age || !gender) {
-    document.getElementById('profile-error').innerText = "Completa todos los campos";
+    const errEl = document.getElementById('profile-error');
+    if (errEl) errEl.innerText = "Completa todos los campos";
     return;
   }
 
   updateSyncStatus(true);
-  const now = new Date().toISOString();
+  const nowDate = new Date();
+  const dateStr = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, '0')}-${String(nowDate.getDate()).padStart(2, '0')}`;
 
-  // Check if update or insert
   const existing = await dbQuery("SELECT user_id FROM user_profile WHERE user_id = ?", [state.currentUser.id]);
   if (existing && existing.results[0].response.result.rows.length > 0) {
-    await dbQuery("UPDATE user_profile SET weight = ?, height = ?, age = ?, gender = ?, daily_steps_goal = ? WHERE user_id = ?",
-      [weight, height, age, gender, stepsGoal, state.currentUser.id]);
+    await dbQuery("UPDATE user_profile SET weight = ?, height = ?, age = ?, gender = ?, daily_steps_goal = ?, preferred_unit = ? WHERE user_id = ?",
+      [weight, height, age, gender, stepsGoal, unit, state.currentUser.id]);
   } else {
-    await dbQuery("INSERT INTO user_profile (user_id, weight, height, age, gender, daily_steps_goal, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [state.currentUser.id, weight, height, age, gender, stepsGoal, now]);
+    await dbQuery("INSERT INTO user_profile (user_id, weight, height, age, gender, daily_steps_goal, preferred_unit, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      [state.currentUser.id, weight, height, age, gender, stepsGoal, unit, dateStr]);
   }
+
+  // Also log the initial weight (using safe local date, not ISO timestamp)
+  await dbQuery("INSERT INTO weight_logs (user_id, weight, date, unit) VALUES (?, ?, ?, ?)",
+    [state.currentUser.id, weight, dateStr, unit]);
 
   const modal = document.getElementById('profile-setup-modal');
   if (modal) modal.remove();
@@ -350,31 +380,56 @@ export async function saveProfile() {
 }
 
 export async function loadUserProfile() {
-  const res = await dbQuery("SELECT * FROM user_profile WHERE user_id = ?", [state.currentUser.id]);
+  // Use explicit columns to avoid index mismatches (SELECT * column order can vary by driver)
+  const res = await dbQuery(
+    "SELECT weight, height, age, gender, daily_steps_goal, preferred_unit FROM user_profile WHERE user_id = ?",
+    [state.currentUser.id]
+  );
   if (res && res.results[0].type === 'ok' && res.results[0].response.result.rows.length > 0) {
     const row = res.results[0].response.result.rows[0];
+    // 0:weight, 1:height, 2:age, 3:gender, 4:daily_steps_goal, 5:preferred_unit
+    const weight = parseFloat(row[0].value);
+    const height = parseInt(row[1].value);
+    // Sanitize: only accept 'kg' or 'lb' — anything else (e.g. stray dates) defaults to 'kg'
+    const rawUnit = row[5]?.value;
+    const unit = (rawUnit === 'kg' || rawUnit === 'lb') ? rawUnit : 'kg';
+
+    let weightInKg = unit === 'lb' ? weight * 0.453592 : weight;
+    let heightInM = height / 100;
+    const bmi = heightInM > 0 ? (weightInKg / (heightInM * heightInM)).toFixed(1) : '--';
+
     state.userProfile = {
-      weight: parseFloat(row[1].value),
-      height: parseInt(row[2].value),
-      age: parseInt(row[3].value),
-      gender: row[4].value,
-      stepsGoal: parseInt(row[5].value),
-      bmi: (parseFloat(row[1].value) / Math.pow(parseInt(row[2].value) / 100, 2)).toFixed(1)
+      weight,
+      height,
+      age: parseInt(row[2].value),
+      gender: row[3].value,
+      stepsGoal: parseInt(row[4].value) || 10000,
+      preferredUnit: unit,
+      bmi
     };
   }
 }
 
-export async function renderDashboard() {
-  if (!state.userProfile) await loadUserProfile();
-  const todaySteps = await getTodaySteps();
-  const history = await getStepsHistory();
-  const stepProgress = Math.min((todaySteps / state.userProfile.stepsGoal) * 100, 100);
-
+export async function renderDashboard(useSkeleton = true) {
   const container = document.getElementById('dashboard-content');
   if (!container) return;
 
+  if (useSkeleton) {
+    container.innerHTML = `
+      <div class="skeleton" style="height: 100px; margin-bottom: 20px;"></div>
+      <div class="skeleton" style="height: 250px; margin-bottom: 20px;"></div>
+      <div class="skeleton" style="height: 100px; margin-bottom: 10px;"></div>
+    `;
+  }
+
+  if (!state.userProfile) await loadUserProfile();
+  const todaySteps = await getTodaySteps();
+  const history = await getStepsHistory();
+  const weightHistory = await getWeightHistory();
+  const stepProgress = Math.min((todaySteps / (state.userProfile?.stepsGoal || 10000)) * 100, 100);
+
   container.innerHTML = `
-    <div class="dashboard-header-new">
+    <div class="dashboard-header-new fade-in">
       <div class="brand-area">
           <img src="favicon.png" alt="LuFit Logo" class="brand-logo" loading="lazy">
           <div class="brand-text">
@@ -387,7 +442,7 @@ export async function renderDashboard() {
       </div>
     </div>
 
-    <div class="dashboard-main-card">
+    <div class="dashboard-main-card glass fade-in">
        <button class="calendar-btn-trigger" onclick="window.openCalendarModal()">📅</button>
        <div class="steps-circle-container">
           <svg class="steps-progress-ring" width="140" height="140">
@@ -400,61 +455,75 @@ export async function renderDashboard() {
              <span class="steps-label">Pasos Hoy</span>
           </div>
        </div>
-       <div class="steps-target">Meta: ${state.userProfile.stepsGoal.toLocaleString()}</div>
+       <div class="steps-target">Meta: ${(state.userProfile?.stepsGoal || 10000).toLocaleString()}</div>
     </div>
     
-    <div class="stats-grid-new">
-       <div class="stat-card-new">
+    <div class="stats-grid-new fade-in">
+       <div class="stat-card-new glass">
           <div class="stat-info-new">
              <span class="stat-label-new">Peso</span>
-             <span class="stat-value-new">${state.userProfile.weight} <span>kg</span></span>
+             <span class="stat-value-new">${state.userProfile?.weight ? parseFloat(state.userProfile.weight).toFixed(1) : '--'} <span>${state.userProfile?.preferredUnit || 'kg'}</span></span>
           </div>
        </div>
-       <div class="stat-card-new">
+       <div class="stat-card-new glass">
           <div class="stat-info-new">
              <span class="stat-label-new">Altura</span>
-             <span class="stat-value-new">${state.userProfile.height} <span>cm</span></span>
+             <span class="stat-value-new">${state.userProfile?.height || '--'} <span>cm</span></span>
           </div>
        </div>
-       <div class="stat-card-new">
+       <div class="stat-card-new glass">
           <div class="stat-info-new">
              <span class="stat-label-new">IMC</span>
-             <span class="stat-value-new">${state.userProfile.bmi}</span>
+             <span class="stat-value-new">${state.userProfile?.bmi || '--'}</span>
           </div>
        </div>
     </div>
 
-     <div class="dashboard-promo">
+    <!-- Weight Analysis Chart -->
+    <div class="dashboard-section fade-in" style="margin-top: 24px;">
+       <h3>Progreso de Peso</h3>
+       <div class="chart-container glass">
+          <canvas id="weightHistoryChart"></canvas>
+       </div>
+       <div style="display:flex; gap:10px; margin-top:12px;">
+         <button class="secondary-btn" onclick="window.showWeightLogModal()" style="flex:1; justify-content: center;">
+            📝 Registrar Peso
+         </button>
+         <button class="secondary-btn" onclick="window.showWeightHistoryModal()" style="flex:1; justify-content: center;">
+            📋 Historial
+         </button>
+       </div>
+    </div>
+
+     <div class="dashboard-promo glass fade-in">
        <div class="dashboard-promo-content">
           <div class="dashboard-promo-text">
-            <h3>Rutinas Personalizadas con IA</h3>
-            <p>Deja que <strong>Lu</strong> analice tus datos y diseñe el plan perfecto para ti.</p>
+            <h3>Rutinas Inteligentes</h3>
+            <p>Deja que <strong>Lu</strong> analice tus progresos y ajuste tu nivel.</p>
           </div>
           <div class="dashboard-promo-icon">🤖</div>
        </div>
        <button onclick="window.showAIPlannerModal()" class="dashboard-promo-btn">
-          ¡Vamos allá! 🚀
+          ¡Ajustar mi plan! 🚀
        </button>
      </div>
 
-
-    <div class="dashboard-section">
+    <div class="dashboard-section fade-in">
       <div class="section-header">
-        <h3>Registro de Pasos</h3>
+        <h3>Actividad Semanal</h3>
       </div>
-      <div class="steps-input-wrapper">
-         <input type="number" id="manual-steps-input" placeholder="Añadir pasos..." value="${todaySteps > 0 ? todaySteps : ''}">
+      <div class="steps-input-wrapper glass">
+         <input type="number" id="manual-steps-input" placeholder="Pasos hoy..." value="${todaySteps > 0 ? todaySteps : ''}">
          <button onclick="window.updateTodaySteps()" class="icon-btn-update">💾</button>
       </div>
 
       ${history.length > 0 ? `
       <div class="history-list">
-        <h4 class="history-title">Días anteriores</h4>
         ${history.map(item => `
           <div class="history-item">
             <span class="history-date">${formatDateLabel(item.date)}</span>
             <div class="history-bar-container">
-               <div class="history-bar" style="width: ${Math.min((item.steps / state.userProfile.stepsGoal) * 100, 100)}%"></div>
+               <div class="history-bar" style="width: ${Math.min((item.steps / (state.userProfile?.stepsGoal || 10000)) * 100, 100)}%"></div>
             </div>
             <span class="history-steps">${item.steps.toLocaleString()}</span>
           </div>
@@ -462,28 +531,15 @@ export async function renderDashboard() {
       </div>
       ` : ''}
     </div>
-
-    <div class="dashboard-section tips-dashboard">
-       <div class="section-header">
-         <h3>Tips rápidos</h3>
-       </div>
-       <ul class="tips-list dashboard-tips">
-          <li>
-            <span class="tip-icon">⚖️</span>
-            <p>Usa <strong>peso medio</strong> (las últimas reps deben costar)</p>
-          </li>
-          <li>
-            <span class="tip-icon">✨</span>
-            <p>Prioriza <strong>buena técnica</strong> por encima del peso</p>
-          </li>
-          <li>
-            <span class="tip-icon">📈</span>
-            <p>Intenta <strong>mejorar cada semana</strong> (peso o reps)</p>
-          </li>
-       </ul>
-    </div>
   `;
+
+  if (weightHistory.length > 0) {
+    initWeightChart(weightHistory);
+  }
 }
+
+
+
 
 export function renderProfile() {
   const container = document.getElementById('profile-content');
@@ -494,56 +550,72 @@ export function renderProfile() {
   }
 
   container.innerHTML = `
-    <h2 class="view-title">Configuración de Perfil Fitness</h2>
+    <h2 class="view-title fade-in">Mi Perfil Fitness</h2>
     
-    <div class="summary-card" style="flex-direction:row; align-items:center; text-align:left; margin-bottom:20px; padding:20px;">
-      <div class="account-avatar" style="width:60px; height:60px; font-size:1.5rem;" aria-label="Avatar de usuario">
+    <div class="summary-card glass fade-in" style="flex-direction:row; align-items:center; text-align:left; margin-bottom:24px; padding:24px;">
+      <div class="account-avatar" style="width:70px; height:70px; font-size:1.8rem; background: var(--lu-gradient);" aria-label="Avatar de usuario">
         ${state.currentUser.username.substring(0, 1).toUpperCase()}
       </div>
-      <div style="margin-left:15px;">
-        <h3 style="margin:0; font-size:1.2rem;">${state.currentUser.username}</h3>
-        <p style="margin:2px 0 0; font-size:0.8rem; opacity:0.6;">Miembro de LuFit</p>
+      <div style="margin-left:20px;">
+        <h3 style="margin:0; font-size:1.4rem;">${state.currentUser.username}</h3>
+        <p style="margin:4px 0 0; font-size:0.9rem; opacity:0.6;">Usuario Premium</p>
       </div>
     </div>
 
-    <div class="dashboard-section">
+    <div class="dashboard-section fade-in">
       <h3>Datos Corporales</h3>
-      <div class="stats-grid" style="grid-template-columns: 1fr 1fr;">
-        <div class="stat-card">
-          <div class="stat-label">Peso</div>
-          <div class="stat-value" style="font-size:1.5rem;">${state.userProfile.weight} kg</div>
+      <div class="stats-grid-new" style="grid-template-columns: 1fr 1fr;">
+        <div class="stat-card-new glass">
+          <div class="stat-info-new">
+            <span class="stat-label-new">Peso</span>
+            <span class="stat-value-new">${state.userProfile.weight} <span>${state.userProfile.preferredUnit}</span></span>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">Altura</div>
-          <div class="stat-value" style="font-size:1.5rem;">${state.userProfile.height} cm</div>
+        <div class="stat-card-new glass">
+          <div class="stat-info-new">
+            <span class="stat-label-new">Altura</span>
+            <span class="stat-value-new">${state.userProfile.height} <span>cm</span></span>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">IMC</div>
-          <div class="stat-value" style="font-size:1.5rem;">${state.userProfile.bmi}</div>
-          <div class="stat-sublabel" style="font-size:0.8rem; margin-top:4px;">${getBMICategory(state.userProfile.bmi)}</div>
+        <div class="stat-card-new glass">
+          <div class="stat-info-new">
+            <span class="stat-label-new">IMC</span>
+            <span class="stat-value-new">${state.userProfile.bmi}</span>
+          </div>
+          <div class="stat-sublabel" style="font-size:0.8rem; margin-top:4px; opacity:0.7;">${getBMICategory(state.userProfile.bmi)}</div>
         </div>
-        <div class="stat-card">
-           <div class="stat-label">Meta Pasos</div>
-           <div class="stat-value" style="font-size:1.5rem;">${state.userProfile.stepsGoal}</div>
+        <div class="stat-card-new glass">
+           <div class="stat-info-new">
+             <span class="stat-label-new">Pasos</span>
+             <span class="stat-value-new">${state.userProfile.stepsGoal.toLocaleString()}</span>
+           </div>
         </div>
       </div>
-      <button onclick="window.showProfileSetup()" class="secondary-btn" style="width:100%; margin-top:16px;">Editar Datos</button>
+      <button onclick="window.showProfileSetup()" class="secondary-btn" style="width:100%; margin-top:20px; justify-content: center;">✏️ Editar Perfil</button>
     </div>
 
-    <div class="dashboard-section" style="margin-top:20px;">
-       <h3>Preferencia de Tema</h3>
-       <button onclick="window.toggleTheme()" class="secondary-btn" style="width:100%; justify-content:center; gap: 10px;">
-         ${state.theme === 'dark' ? '☀️ Cambiar a Modo Claro' : '🌙 Cambiar a Modo Oscuro'}
-       </button>
+    <div class="dashboard-section fade-in" style="margin-top:24px;">
+       <h3>Opciones Avanzadas</h3>
+       <div style="display: flex; flex-direction: column; gap: 12px;">
+         <button onclick="window.toggleTheme()" class="secondary-btn" style="width:100%; justify-content:center; gap: 10px;">
+           ${state.theme === 'dark' ? '☀️ Cambiar a Modo Claro' : '🌙 Cambiar a Modo Oscuro'}
+         </button>
+         <button onclick="window.exportUserData()" class="secondary-btn" style="width:100%; justify-content:center; gap: 10px;">
+           📥 Exportar mis Datos (JSON)
+         </button>
+       </div>
     </div>
 
-    <div class="dashboard-section" style="margin-top:20px;">
+    <div class="dashboard-section fade-in" style="margin-top:32px; padding-bottom: 40px;">
       <button onclick="window.logout()" class="danger-btn" style="width:100%; justify-content:center;">
         Cerrar Sesión
       </button>
     </div>
   `;
 }
+
+
+
 
 function getBMICategory(bmi) {
   const b = parseFloat(bmi);
@@ -861,7 +933,7 @@ export async function createWeek(name, routineId = null, useDefault = false) {
   if (!useDefault && state.weeks.length > 0) {
     const lastWeekId = state.weeks[state.weeks.length - 1].id;
     await dbQuery(`INSERT INTO day_titles (week_id, day_index, title, day_order) SELECT ?, day_index, title, day_order FROM day_titles WHERE week_id = ?`, [newWeekId, lastWeekId]);
-    await dbQuery(`INSERT INTO exercises (week_id, day_index, exercise_library_id, custom_name, series_target, weight, order_index, completed) SELECT ?, day_index, exercise_library_id, custom_name, series_target, weight, order_index, 0 FROM exercises WHERE week_id = ?`, [newWeekId, lastWeekId]);
+    await dbQuery(`INSERT INTO exercises (week_id, day_index, exercise_library_id, custom_name, series_target, reps_target, weight, order_index, completed) SELECT ?, day_index, exercise_library_id, custom_name, series_target, reps_target, weight, order_index, 0 FROM exercises WHERE week_id = ?`, [newWeekId, lastWeekId]);
     copied = true;
   }
 
@@ -896,10 +968,15 @@ export async function createEmptyWeek(name, routineId, numDays) {
 
 export async function loadDayTitles() {
   if (!state.currentWeekId) return;
-  const res = await dbQuery("SELECT day_index, title FROM day_titles WHERE week_id = ? ORDER BY day_index ASC", [state.currentWeekId]);
+  const res = await dbQuery("SELECT day_index, title, day_order FROM day_titles WHERE week_id = ? ORDER BY day_order ASC, day_index ASC", [state.currentWeekId]);
   state.dayTitles = {};
+  state.dayOrder = [];
   if (res && res.results[0].type === 'ok') {
-    res.results[0].response.result.rows.forEach(r => state.dayTitles[parseInt(r[0].value)] = r[1].value);
+    res.results[0].response.result.rows.forEach(r => {
+      const idx = parseInt(r[0].value);
+      state.dayTitles[idx] = r[1].value;
+      state.dayOrder.push(idx);
+    });
   }
 }
 
@@ -908,9 +985,14 @@ export async function loadExercises() {
   // Fallback if dayTitles empty?
   if (Object.keys(state.dayTitles).length === 0) await loadDayTitles();
 
-  // V2 JOIN Query
+  // Ensure currentDay is valid for this week
+  if (!state.dayOrder.includes(state.currentDay)) {
+    state.currentDay = state.dayOrder[0] || 1;
+  }
+
+  // V2 JOIN Query - Including unit for per-exercise support if needed
   const res = await dbQuery(`
-    SELECT e.id, e.day_index, l.name, e.custom_name, e.series_target, e.completed, e.weight, e.order_index, e.sensation 
+    SELECT e.id, e.day_index, l.name, e.custom_name, e.series_target, e.reps_target, e.completed, e.weight, e.order_index, e.sensation, e.unit
     FROM exercises e 
     LEFT JOIN exercise_library l ON e.exercise_library_id = l.id
     WHERE e.week_id = ? AND e.day_index = ? 
@@ -922,13 +1004,37 @@ export async function loadExercises() {
     state.currentExercises = res.results[0].response.result.rows.map(r => ({
       id: parseInt(r[0].value),
       day: parseInt(r[1].value),
-      name: r[2].value || r[3].value || "Ejercicio", // Library Name or Custom
-      sets: r[4].value,
-      completed: parseInt(r[5].value) === 1,
-      weight: r[6].value || "",
-      order_index: parseInt(r[7].value),
-      sensation: r[8].value || null
+      name: r[2].value || r[3].value || "Ejercicio",
+      series: parseInt(r[4].value) || 0,
+      reps: r[5].value || "",
+      completed: parseInt(r[6].value) === 1,
+      weight: r[7].value || "",
+      order_index: parseInt(r[8].value),
+      sensation: r[9].value || null,
+      unit: r[10]?.value || state.userProfile?.preferredUnit || 'kg',
+      sets_data: []
     }));
+
+    // Fetch Sets Data for these exercises
+    const exerciseIds = state.currentExercises.map(e => e.id);
+    if (exerciseIds.length > 0) {
+      const setsRes = await dbQuery(`SELECT exercise_id, set_index, reps_done, weight_done, completed, sensation FROM exercise_sets WHERE exercise_id IN (${exerciseIds.join(',')})`);
+      if (setsRes && setsRes.results[0].type === 'ok') {
+        const setRows = setsRes.results[0].response.result.rows;
+        state.currentExercises.forEach(ex => {
+          ex.sets_data = setRows
+            .filter(s => parseInt(s[0].value) === ex.id)
+            .map(s => ({
+              id: ex.id,
+              index: parseInt(s[1].value),
+              reps: s[2].value ? parseInt(s[2].value) : null,
+              weight: s[3].value ? parseFloat(s[3].value) : null,
+              completed: parseInt(s[4].value) === 1,
+              sensation: s[5].value || null
+            }));
+        });
+      }
+    }
   }
   renderRoutine();
 }
@@ -987,9 +1093,9 @@ export function renderDaySelector() {
   const container = document.querySelector('.day-selector');
   if (!container) return;
 
-  const days = Object.keys(state.dayTitles).sort((a, b) => parseInt(a) - parseInt(b));
+  const days = state.dayOrder;
   let html = days.map(d => `
-    <button class="day-tab ${state.currentDay == d ? 'active' : ''}" 
+    <button class="day-tab ${state.currentDay == d ? 'active' : ''}"
             data-day="${d}"
             onclick="window.setDay(${d})"
             onpointerdown="window.handlePointerDown(event, ${d}, ${d}, 'day')">
@@ -1011,6 +1117,7 @@ export async function addDay() {
   const newTitle = `Día ${newIndex}`;
   await dbQuery("INSERT INTO day_titles (week_id, day_index, title, day_order) VALUES (?, ?, ?, ?)", [state.currentWeekId, newIndex, newTitle, newIndex - 1]);
   state.dayTitles[newIndex] = newTitle;
+  state.dayOrder.push(newIndex);
 
   // Create first blank exercise so it's not empty? No, let user add.
   renderDaySelector();
@@ -1029,9 +1136,10 @@ export function renderRoutine() {
 
   const color = ["var(--accent-1)", "var(--accent-2)", "var(--accent-3)", "var(--accent-4)"][state.currentDay - 1] || "var(--lu-pink)";
   const displayTitle = state.dayTitles[state.currentDay] || `Día ${state.currentDay}`;
+  const globalUnit = state.userProfile?.preferredUnit || 'kg';
 
   container.innerHTML = `
-    <div class="day-header">
+    <div class="day-header fade-in">
       <div class="day-header-top">
          <span class="day-tag" style="background: ${color}20; color: ${color}; margin-bottom: 0;">DÍA ${state.currentDay}</span>
       </div>
@@ -1043,34 +1151,80 @@ export function renderRoutine() {
          </div>
       </div>
     </div>
-    <div class="exercise-list">
-      ${state.currentExercises.map((ex, idx) => {
-    const feedbackColors = { 'excessive': '#ef4444', 'optimal': '#facc15', 'light': '#22c55e' }; // More vivid Tailwind-like colors
-    const borderStyle = ex.sensation ? `border-left: 4px solid ${feedbackColors[ex.sensation]} !important` : 'border-left: 4px solid transparent !important';
+    <div class="exercise-list fade-in">
+      ${state.currentExercises.length === 0 ? `
+        <div class="empty-state glass" style="padding: 40px; text-align: center; border-radius: var(--radius-md); margin: 20px 0; border: 1px dashed var(--panel-border);">
+           <div style="font-size: 2rem; margin-bottom: 12px;">🏋️‍♂️</div>
+           <p style="color: var(--text-secondary);">No hay ejercicios para hoy.</p>
+           <p style="font-size: 0.8rem; opacity: 0.6; margin-top: 4px;">¡Añade uno para empezar!</p>
+        </div>
+      ` : state.currentExercises.map((ex, idx) => {
+    const feedbackColors = { 'excessive': '#ef4444', 'optimal': '#facc15', 'light': '#22c55e' };
+    const currentUnit = ex.unit || globalUnit;
+    const allSetsDone = ex.sets_data.length >= ex.series && ex.sets_data.every(s => s.completed);
+    const isExpanded = state.expandedExercises.includes(ex.id);
+
     return `
-        <div class="exercise-card ${ex.completed ? 'completed' : ''}"
+        <div class="exercise-card glass ${allSetsDone ? 'completed' : ''} ${isExpanded ? '' : 'collapsed'}"
+             id="ex-card-${ex.id}"
              data-index="${idx}" data-id="${ex.id}"
-             style="${borderStyle}"
              onpointerdown="window.handlePointerDown(event, ${ex.id}, ${idx}, 'exercise')">
-          <div class="exercise-main" onclick="window.toggleExercise(${ex.id}, ${ex.completed})">
+          <div class="exercise-main" onclick="window.toggleExerciseExpand(${ex.id})">
             <div class="exercise-info">
               <span class="exercise-name">${ex.name}</span>
-              <span class="exercise-sets">${ex.sets}</span>
+              <span class="exercise-sets">${ex.series} x ${ex.reps}</span>
             </div>
-            <div style="display: flex; gap:12px; align-items:center;">
-               <button class="edit-ex-btn" onclick="event.stopPropagation(); window.openEditModal(${ex.id})"></button>
-               <button class="delete-ex-btn" onclick="event.stopPropagation(); window.deleteExercise(${ex.id})"></button>
-               <div class="checkbox-wrapper"><span class="checkmark" style="color: ${color}"></span></div>
+            <div class="card-actions">
+               <button class="action-btn" onclick="event.stopPropagation(); window.openEditModal(${ex.id})">Editar</button>
+               <button class="action-btn" onclick="event.stopPropagation(); window.deleteExercise(${ex.id})">Borrar</button>
             </div>
           </div>
-          <div class="exercise-extra">
-             <input type="text" placeholder="Peso (kg)" value="${ex.weight}" onchange="window.updateWeight(${ex.id}, this.value)" onclick="event.stopPropagation()">
+          
+          <!-- Logging Area -->
+          <div class="exercise-logs">
+             <div class="sets-header">
+                <span>Serie</span>
+                <span>Esfuerzo</span>
+                <span>Reps</span>
+                <span>Peso (${currentUnit})</span>
+             </div>
+             ${Array.from({ length: ex.series }).map((_, sIdx) => {
+      const setInfo = ex.sets_data.find(s => s.index === sIdx) || { reps: '', weight: ex.weight || '', completed: false, sensation: null };
+      const dotColor = setInfo.sensation ? feedbackColors[setInfo.sensation] : 'transparent';
+
+      return `
+                <div class="set-row">
+                   <div class="set-num">${sIdx + 1}</div>
+                   
+                   <div class="set-effort">
+                      <div class="effort-box ${setInfo.sensation || ''}" 
+                           onclick="window.toggleSetStatus(${ex.id}, ${sIdx}, ${setInfo.completed})">
+                      </div>
+                   </div>
+                   
+                   <div class="set-reps">
+                      <input type="number" class="log-input" placeholder="Ej: 6" 
+                             value="${setInfo.reps}" 
+                             step="1" inputmode="numeric"
+                             onchange="window.saveSetPerformance(${ex.id}, ${sIdx}, 'reps', this.value)">
+                   </div>
+                   
+                   <div class="set-weight">
+                       <input type="number" step="0.1" inputmode="decimal" class="log-input" placeholder="Ej: 10" 
+                              value="${setInfo.weight}" 
+                              onchange="window.saveSetPerformance(${ex.id}, ${sIdx}, 'weight', this.value)">
+                   </div>
+                </div>
+               `;
+    }).join('')}
           </div>
         </div>
       `;
   }).join('')}
     </div>
-    <button class="add-ex-bottom-btn" onclick="window.openAddModal()"><span>＋</span> Añadir Ejercicio</button>
+    <button class="add-ex-bottom-btn glass fade-in" onclick="window.openAddModal()" style="border: 1px dashed var(--panel-border);">
+        <span>＋</span> Añadir Ejercicio
+    </button>
   `;
 }
 
@@ -1092,17 +1246,27 @@ export function openAddModal() {
   // Inject Search UI
   const body = modal.querySelector('.modal-body');
   body.innerHTML = `
-    <div class="input-group">
+    <div class="input-group" style="margin-bottom: 20px;">
       <label>Buscar Ejercicio</label>
-      <input type="text" id="ex-search-input" placeholder="Escribe 'Sentadilla'..." autocomplete="off">
-      <div id="ex-search-results" class="search-results-dropdown"></div>
+      <div style="position: relative;">
+        <input type="text" id="ex-search-input" placeholder="Escribe 'Sentadilla'..." autocomplete="off" class="glass-input">
+        <div id="ex-search-results" class="search-results-dropdown glass shadow-lg"></div>
+      </div>
       <input type="hidden" id="selected-lib-id">
     </div>
-    <div class="input-group">
-      <label for="new-ex-sets">Series y Repes (Objetivo)</label>
-      <input type="text" id="new-ex-sets" placeholder="Ej: 4 × 10">
+    <div class="input-row" style="display: flex; gap: 12px;">
+      <div class="input-group" style="flex: 1;">
+        <label for="new-ex-series">Series</label>
+        <input type="number" id="new-ex-series" placeholder="4" min="1" class="glass-input">
+      </div>
+      <div class="input-group" style="flex: 2;">
+        <label for="new-ex-reps">Repeticiones</label>
+        <input type="text" id="new-ex-reps" placeholder="10-12" class="glass-input">
+      </div>
     </div>
-    <button id="save-ex-btn" class="primary-btn" disabled>Guardar Ejercicio</button>
+    <div style="margin-top: 24px;">
+       <button id="save-ex-btn" class="primary-btn full-width" disabled>Selecciona un ejercicio</button>
+    </div>
   `;
 
   document.getElementById('modal-title').innerText = "Añadir Ejercicio";
@@ -1163,50 +1327,55 @@ export function openEditModal(id) {
   editingExerciseId = id;
 
   const modal = document.getElementById('add-exercise-modal');
-  const body = modal.querySelector('.modal-body');
+  const body = document.getElementById('exercise-modal-body');
 
-  // Edit is simpler: Show Name (Readonly or Editable if custom?)
   body.innerHTML = `
     <div class="input-group">
        <label>Ejercicio</label>
-       <input type="text" value="${ex.name}" disabled style="opacity: 0.7">
+       <input type="text" value="${ex.name}" disabled class="glass-input" style="opacity: 0.7">
     </div>
-    <div class="input-group">
-      <label>Series y Repes</label>
-      <input type="text" id="new-ex-sets" value="${ex.sets}">
+    <div class="input-row" style="display: flex; gap: 12px; margin-top: 16px;">
+      <div class="input-group" style="flex: 1;">
+        <label>Series</label>
+        <input type="number" id="new-ex-series" value="${ex.series}" min="1" class="glass-input">
+      </div>
+      <div class="input-group" style="flex: 2;">
+        <label>Repeticiones</label>
+        <input type="text" id="new-ex-reps" value="${ex.reps}" class="glass-input" placeholder="Ej: 10-12">
+      </div>
     </div>
-    <button id="save-ex-btn" class="primary-btn">Actualizar</button>
+    <div style="margin-top: 24px;">
+       <button id="save-ex-btn" class="primary-btn full-width">Actualizar Objetivos</button>
+    </div>
   `;
 
-  document.getElementById('modal-title').innerText = "Editar Objetivos";
+  document.getElementById('modal-title').innerText = "Personalizar Entrenamiento";
   modal.style.display = 'flex';
   document.getElementById('save-ex-btn').onclick = saveExercise;
 }
 
 export async function saveExercise() {
-  const sets = document.getElementById('new-ex-sets').value.trim();
+  const series = parseInt(document.getElementById('new-ex-series').value);
+  const reps = document.getElementById('new-ex-reps').value.trim();
   const libId = document.getElementById('selected-lib-id') ? document.getElementById('selected-lib-id').value : null;
   const customName = document.getElementById('ex-search-input') ? document.getElementById('ex-search-input').value.trim() : null;
+  const unit = state.userProfile?.preferredUnit || 'kg';
 
-  if (!sets) return;
+  if (isNaN(series) || !reps) return;
 
   updateSyncStatus(true);
 
   if (editingExerciseId) {
-    // Update Target only
-    await dbQuery("UPDATE exercises SET series_target = ? WHERE id = ?", [sets, editingExerciseId]);
+    await dbQuery("UPDATE exercises SET series_target = ?, reps_target = ? WHERE id = ?", [series, reps, editingExerciseId]);
   } else {
-    // Insert New
     if (!libId && !customName) return;
-
     const order = state.currentExercises.length;
-    // V2: Insert Reference OR Custom Name
     if (libId) {
-      await dbQuery("INSERT INTO exercises (week_id, day_index, exercise_library_id, series_target, order_index) VALUES (?, ?, ?, ?, ?)",
-        [state.currentWeekId, state.currentDay, libId, sets, order]);
+      await dbQuery("INSERT INTO exercises (week_id, day_index, exercise_library_id, series_target, reps_target, order_index, unit) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [state.currentWeekId, state.currentDay, libId, series, reps, order, unit]);
     } else {
-      await dbQuery("INSERT INTO exercises (week_id, day_index, custom_name, series_target, order_index) VALUES (?, ?, ?, ?, ?)",
-        [state.currentWeekId, state.currentDay, customName, sets, order]);
+      await dbQuery("INSERT INTO exercises (week_id, day_index, custom_name, series_target, reps_target, order_index, unit) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [state.currentWeekId, state.currentDay, customName, series, reps, order, unit]);
     }
   }
 
@@ -1215,17 +1384,116 @@ export async function saveExercise() {
   updateSyncStatus(false);
 }
 
+export function toggleExerciseExpand(id) {
+  const card = document.getElementById(`ex-card-${id}`);
+  if (card) {
+    card.classList.toggle('collapsed');
+    const isCollapsed = card.classList.contains('collapsed');
+    if (!isCollapsed) {
+      if (!state.expandedExercises.includes(id)) state.expandedExercises.push(id);
+    } else {
+      state.expandedExercises = state.expandedExercises.filter(eid => eid !== id);
+    }
+  }
+}
+
 export async function toggleExercise(id, status) {
   const newStatus = !status;
+  // Update local state
+  const ex = state.currentExercises.find(e => e.id === id);
+  if (ex) ex.completed = newStatus;
+
+  renderRoutine();
+
+  // Persist
+  await dbQuery("UPDATE exercises SET completed = ? WHERE id = ?", [newStatus, id]);
+}
+
+export async function toggleSetStatus(exId, setIdx, currentStatus) {
+  event.stopPropagation();
+  const newStatus = !currentStatus;
+
+  updateSyncStatus(true);
+
+  // Update local state immediately for responsiveness
+  const ex = state.currentExercises.find(e => e.id === exId);
+  if (ex) {
+    let set = ex.sets_data.find(s => s.index === setIdx);
+    if (!set) {
+      set = { id: exId, index: setIdx, reps: null, weight: null, completed: newStatus, sensation: null };
+      ex.sets_data.push(set);
+    } else {
+      set.completed = newStatus;
+      if (!newStatus) set.sensation = null;
+    }
+  }
+
+  // Persist to DB
+  const check = await dbQuery("SELECT id FROM exercise_sets WHERE exercise_id = ? AND set_index = ?", [exId, setIdx]);
+  if (check && check.results[0].response.result.rows.length === 0) {
+    await dbQuery("INSERT INTO exercise_sets (exercise_id, set_index, completed) VALUES (?, ?, ?)", [exId, setIdx, newStatus ? 1 : 0]);
+  } else {
+    await dbQuery("UPDATE exercise_sets SET completed = ? WHERE exercise_id = ? AND set_index = ?", [newStatus ? 1 : 0, exId, setIdx]);
+  }
 
   if (newStatus) {
-    await dbQuery("UPDATE exercises SET completed = ? WHERE id = ?", [newStatus, id]);
-    await showFeedbackModal(id);
+    await showSetFeedbackModal(exId, setIdx);
   } else {
-    // If unmarking, reset sensation so the color returns to native/transparent
-    await dbQuery("UPDATE exercises SET completed = ?, sensation = NULL WHERE id = ?", [0, id]);
-    await loadExercises();
+    await dbQuery("UPDATE exercise_sets SET sensation = NULL WHERE exercise_id = ? AND set_index = ?", [exId, setIdx]);
+    renderRoutine(); // Render with local state update
   }
+  updateSyncStatus(false);
+}
+
+export async function showSetFeedbackModal(exId, setIdx) {
+  return new Promise((resolve) => {
+    const modalId = 'set-feedback-modal';
+    const existing = document.getElementById(modalId);
+    if (existing) existing.remove();
+
+    const html = `
+      <div class="modal" id="${modalId}" style="display: flex;">
+        <div class="modal-content feedback-modal" style="max-width: 320px;">
+          <div class="modal-header">
+             <h3>Esfuerzo Serie ${setIdx + 1}</h3>
+             <button class="close-modal">×</button>
+          </div>
+          <div class="modal-body">
+             <div class="feedback-options mini">
+                <button class="feedback-option light" data-val="light">Ligero 🟢</button>
+                <button class="feedback-option optimal" data-val="optimal">Óptimo 🟠</button>
+                <button class="feedback-option excessive" data-val="excessive">Excesivo 🔴</button>
+             </div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', html);
+
+    const closeModal = () => {
+      document.getElementById(modalId).remove();
+      renderRoutine();
+      resolve();
+    };
+
+    document.querySelectorAll('.feedback-option').forEach(btn => {
+      btn.onclick = async () => {
+        const val = btn.dataset.val;
+        await dbQuery("UPDATE exercise_sets SET sensation = ? WHERE exercise_id = ? AND set_index = ?", [val, exId, setIdx]);
+
+        // Update local state for immediate render
+        const ex = state.currentExercises.find(e => e.id === exId);
+        if (ex) {
+          const set = ex.sets_data.find(s => s.index === setIdx);
+          if (set) set.sensation = val;
+        }
+
+        closeModal();
+      };
+    });
+
+    document.querySelector(`#${modalId} .close-modal`).onclick = closeModal;
+  });
 }
 
 export async function showFeedbackModal(exerciseId) {
@@ -1280,6 +1548,36 @@ export async function showFeedbackModal(exerciseId) {
   });
 }
 
+export async function saveSetPerformance(exId, setIdx, field, val) {
+  // Update local state first for responsiveness
+  const ex = state.currentExercises.find(e => e.id === exId);
+  if (ex) {
+    let set = ex.sets_data.find(s => s.index === setIdx);
+    if (!set) {
+      set = { id: exId, index: setIdx, reps: null, weight: null };
+      ex.sets_data.push(set);
+    }
+    if (field === 'reps') set.reps = parseInt(val) || null;
+    if (field === 'weight') set.weight = parseFloat(val) || null;
+  }
+
+  // Persist to DB
+  updateSyncStatus(true);
+  const check = await dbQuery("SELECT id FROM exercise_sets WHERE exercise_id = ? AND set_index = ?", [exId, setIdx]);
+
+  if (check && check.results[0].response.result.rows.length > 0) {
+    const sql = field === 'reps'
+      ? "UPDATE exercise_sets SET reps_done = ? WHERE exercise_id = ? AND set_index = ?"
+      : "UPDATE exercise_sets SET weight_done = ? WHERE exercise_id = ? AND set_index = ?";
+    await dbQuery(sql, [val, exId, setIdx]);
+  } else {
+    const reps = field === 'reps' ? val : null;
+    const weight = field === 'weight' ? val : null;
+    await dbQuery("INSERT INTO exercise_sets (exercise_id, set_index, reps_done, weight_done) VALUES (?, ?, ?, ?)", [exId, setIdx, reps, weight]);
+  }
+  updateSyncStatus(false);
+}
+
 export async function updateWeight(id, val) {
   // val might be string, but column is REAL. SQLite handles '12.5'.
   await dbQuery("UPDATE exercises SET weight = ? WHERE id = ?", [val, id]);
@@ -1316,10 +1614,10 @@ export async function deleteDay() {
     await dbQuery("DELETE FROM exercises WHERE week_id = ? AND day_index = ?", [state.currentWeekId, state.currentDay]);
 
     delete state.dayTitles[state.currentDay];
+    state.dayOrder = state.dayOrder.filter(d => d !== state.currentDay);
 
     // Switch to another available day
-    const availableDays = Object.keys(state.dayTitles).map(k => parseInt(k)).sort((a, b) => a - b);
-    state.currentDay = availableDays[0];
+    state.currentDay = state.dayOrder[0];
 
     await loadExercises();
     renderDaySelector();
@@ -1883,6 +2181,7 @@ async function handleDragEnd() {
 }
 
 async function saveNewOrder() {
+  updateSyncStatus(true);
   if (dragType === 'exercise') {
     const cards = document.querySelectorAll('.exercise-list .exercise-card');
     const updatePromises = Array.from(cards).map(async (card, idx) => {
@@ -1897,26 +2196,300 @@ async function saveNewOrder() {
     await Promise.all(updatePromises);
     // Silent update, no reload needed as DOM is already matching
   } else if (dragType === 'day') {
-    const tabs = document.querySelectorAll('.day-selector .day-tab');
+    const tabs = document.querySelectorAll('.day-selector .day-tab:not(.add-day-mini)');
+    const newOrder = [];
     const updatePromises = Array.from(tabs).map(async (tab, idx) => {
-      const text = tab.innerText.trim();
-      // We match by title? Tricky.
-      // Better: We reload logic. 
-      // Since days are dynamic, we need to map the DOM text "Día X" back to the day_index.
-      // Actually, the easy way is to assume they are just re-sorted visually,
-      // but 'day_index' in DB is strict. 
-      // If user swaps Day 1 and Day 2, we actually just swap their CONTENTS or swap their TITLES/ORDER.
-
-      // Simpler for now: We won't reorder Days physically in DB structure 'day_index' 
-      // (because that defines the key), but we can update 'day_order' column if we added it.
-      // Since we mostly rely on day_index, let's just warn or refresh.
-      // Reordering days is complex because day 1 is day 1. 
-      // If I move Day 1 to Position 2, it becomes Day 2?
+      const dayIndex = parseInt(tab.dataset.day);
+      if (!isNaN(dayIndex)) {
+        newOrder.push(dayIndex);
+        await dbQuery("UPDATE day_titles SET day_order = ? WHERE week_id = ? AND day_index = ?", [idx, state.currentWeekId, dayIndex]);
+      }
     });
-    // For this prototype, Exercises reorder is key. Days reorder might be skipped if too complex for single file fix without robust day_order support.
-    // However, I will support basic saving if I can extract IDs.
+    await Promise.all(updatePromises);
+    state.dayOrder = newOrder;
+  }
+  updateSyncStatus(false);
+}
+
+
+// ============================================
+// WEIGHT LOGGING & HISTORY
+// ============================================
+
+export async function getWeightHistory() {
+  // Get the LATEST 60 records (ordered by date and id to handle same-day entries)
+  const res = await dbQuery("SELECT id, weight, date, unit FROM weight_logs WHERE user_id = ? ORDER BY date DESC, id DESC LIMIT 60", [state.currentUser.id]);
+  if (res && res.results[0].type === 'ok') {
+    const rows = res.results[0].response.result.rows.map(r => ({
+      id: r[0].value,
+      weight: parseFloat(r[1].value),
+      date: r[2].value,
+      unit: r[3].value
+    }));
+    // Reverse so the chart shows them in chronological order (oldest to newest)
+    return rows.reverse();
+  }
+  return [];
+}
+
+export async function initWeightChart(history) {
+  const ctx = document.getElementById('weightHistoryChart');
+  if (!ctx) return;
+
+  if (history.length === 0) return;
+
+  const preferredUnit = state.userProfile?.preferredUnit || 'kg';
+  const labels = history.map(h => {
+    const rawDate = h.date ? h.date.toString().split('T')[0] : '';
+    const parts = rawDate.split('-');
+    if (parts.length === 3) {
+      const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+    }
+    return rawDate;
+  });
+
+  const dataPoints = history.map(h => {
+    let val = h.weight;
+    // Sanitize: treat any non-standard unit as 'kg' (guards against corrupted data)
+    const entryUnit = (h.unit === 'kg' || h.unit === 'lb') ? h.unit : 'kg';
+    if (entryUnit !== preferredUnit) {
+      val = entryUnit === 'kg' ? val * 2.20462 : val * 0.453592;
+    }
+    return parseFloat(val.toFixed(1));
+  });
+
+  if (window.myWeightChart) window.myWeightChart.destroy();
+
+  const isLight = state.theme === 'light';
+  const gridColor = isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)';
+  const textColor = isLight ? '#64748b' : '#94a3b8';
+
+  window.myWeightChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: `Peso (${preferredUnit})`,
+        data: dataPoints,
+        borderColor: '#d81b60',
+        backgroundColor: 'rgba(216, 27, 96, 0.1)',
+        borderWidth: history.length > 1 ? 3 : 0,
+        tension: 0.4,
+        fill: history.length > 1,
+        pointRadius: 6,
+        pointBackgroundColor: '#ff8a65',
+        pointBorderColor: isLight ? '#ffffff' : 'white',
+        pointBorderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: isLight ? 'rgba(255, 255, 255, 0.95)' : 'rgba(30, 30, 35, 0.9)',
+          titleFont: { weight: 'bold' },
+          titleColor: isLight ? '#0f172a' : '#ffffff',
+          bodyColor: isLight ? '#0f172a' : '#ffffff',
+          padding: 12,
+          cornerRadius: 10,
+          displayColors: false,
+          borderColor: isLight ? 'rgba(0,0,0,0.1)' : 'transparent',
+          borderWidth: 1,
+          callbacks: {
+            label: function (context) {
+              return `Peso: ${context.parsed.y.toFixed(1)} ${preferredUnit}`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          grid: { color: gridColor },
+          ticks: {
+            color: textColor,
+            callback: function (value) { return value.toFixed(1); }
+          },
+          beginAtZero: false
+        },
+        x: {
+          grid: { display: false },
+          ticks: { color: textColor }
+        }
+      }
+    }
+  });
+}
+
+export function showWeightLogModal() {
+  const modalId = 'weight-log-modal';
+  let modal = document.getElementById(modalId);
+  if (modal) modal.remove();
+
+  const unit = state.userProfile?.preferredUnit || 'kg';
+  const currentWeight = state.userProfile?.weight || '';
+
+  const html = `
+        <div class="modal" id="${modalId}" style="display: flex;">
+            <div class="modal-content glass" style="max-width: 320px;">
+                <div class="modal-header">
+                    <h3>Registrar Peso</h3>
+                    <button class="close-modal" onclick="document.getElementById('${modalId}').remove()">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group">
+                        <label>Peso Actual (${unit})</label>
+                        <input type="number" id="new-weight-input" step="0.1" inputmode="decimal" value="${currentWeight}" class="glass-input" style="font-size: 1.5rem; text-align: center;">
+                    </div>
+                    <button class="primary-btn full-width" style="margin-top: 20px;" onclick="window.saveWeightLog()">Guardar Registro</button>
+                    <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 12px; text-align: center;">Tu progreso se actualizará en el dashboard.</p>
+                </div>
+            </div>
+        </div>
+    `;
+  document.body.insertAdjacentHTML('beforeend', html);
+  const input = document.getElementById('new-weight-input');
+  input.focus();
+  input.select();
+}
+
+export async function saveWeightLog() {
+  const weightInput = document.getElementById('new-weight-input');
+  // Handle both dot and comma as decimal separators
+  let rawVal = weightInput.value.replace(',', '.');
+  const weight = parseFloat(rawVal);
+
+  if (isNaN(weight) || weight <= 0) {
+    showAlert('Por favor, introduce un peso válido', 'error');
+    return;
+  }
+
+  const unit = state.userProfile?.preferredUnit || 'kg';
+  const nowDate = new Date();
+  const dateStr = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, '0')}-${String(nowDate.getDate()).padStart(2, '0')}`;
+
+  updateSyncStatus(true);
+  try {
+    await dbQuery("INSERT INTO weight_logs (user_id, weight, date, unit) VALUES (?, ?, ?, ?)", [state.currentUser.id, weight, dateStr, unit]);
+    await dbQuery("UPDATE user_profile SET weight = ? WHERE user_id = ?", [weight, state.currentUser.id]);
+
+    // Refresh local state
+    state.userProfile.weight = weight;
+
+    // Re-calculate BMI
+    let weightInKg = unit === 'lb' ? weight * 0.453592 : weight;
+    let heightInM = state.userProfile.height / 100;
+    if (heightInM > 0) {
+      state.userProfile.bmi = (weightInKg / (heightInM * heightInM)).toFixed(1);
+    }
+
+    const modal = document.getElementById('weight-log-modal');
+    if (modal) modal.remove();
+
+    // Force a full re-render of the dashboard to ensure everything is fresh
+    await renderDashboard(false);
+    showAlert('Peso registrado correctamente', 'success');
+  } catch (err) {
+    console.error("Error saving weight log:", err);
+    showAlert('Error al guardar el peso. Inténtalo de nuevo.', 'error');
+  } finally {
+    updateSyncStatus(false);
   }
 }
+
+export async function deleteWeightLog(id) {
+  if (!await showConfirm('¿Eliminar este registro de peso?', 'Borrar Registro', { isDanger: true, confirmText: 'Eliminar' })) return;
+  updateSyncStatus(true);
+  await dbQuery("DELETE FROM weight_logs WHERE id = ?", [id]);
+  updateSyncStatus(false);
+  // Refresh the history modal
+  const existing = document.getElementById('weight-history-modal');
+  if (existing) existing.remove();
+  showWeightHistoryModal();
+  await renderDashboard(false);
+}
+
+export async function showWeightHistoryModal() {
+  const modalId = 'weight-history-modal';
+  const existing = document.getElementById(modalId);
+  if (existing) existing.remove();
+
+  const history = await getWeightHistory();
+  const unit = state.userProfile?.preferredUnit || 'kg';
+
+  const rows = history.length === 0
+    ? `<p style="text-align:center; color:var(--text-secondary); padding:20px 0;">Sin registros de peso todavía.</p>`
+    : [...history].reverse().map(h => {
+      const rawDate = h.date ? h.date.toString().split('T')[0] : '';
+      const parts = rawDate.split('-');
+      let displayDate = rawDate;
+      if (parts.length === 3) {
+        const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        displayDate = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+      }
+      return `
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+            <span style="color:var(--text-secondary); font-size:0.9rem;">${displayDate}</span>
+            <span style="font-weight:800; font-size:1.1rem;">${parseFloat(h.weight).toFixed(1)} <span style="font-size:0.8rem; font-weight:400; opacity:0.6;">${h.unit || unit}</span></span>
+            <button onclick="window.deleteWeightLog(${h.id})" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:6px; padding:4px 10px; cursor:pointer; font-size:0.8rem;">🗑️ Borrar</button>
+          </div>
+        `;
+    }).join('');
+
+  const html = `
+    <div class="modal" id="${modalId}" style="display:flex;">
+      <div class="modal-content glass" style="max-width:400px; width:90%;">
+        <div class="modal-header">
+          <h3>Historial de Peso</h3>
+          <button class="close-modal" onclick="document.getElementById('${modalId}').remove()">×</button>
+        </div>
+        <div class="modal-body" style="gap:0; max-height:60vh; overflow-y:auto;">
+          ${rows}
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+// ============================================
+// DATA EXPORT & PREMIUM
+// ============================================
+
+export async function exportUserData() {
+  updateSyncStatus(true);
+  try {
+    const profile = state.userProfile;
+    const routines = state.routines;
+    const weightLogs = await getWeightHistory();
+
+    const data = {
+      appName: "LuFit",
+      exportDate: new Date().toISOString(),
+      user: state.currentUser.username,
+      profile,
+      routines,
+      weightLogs
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `LuFit_Data_${state.currentUser.username}_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showAlert("Tus datos han sido exportados correctamente. 📥", "Exportación Exitosa");
+  } catch (err) {
+    showAlert("Error al exportar los datos. Por favor, inténtalo de nuevo.", "Error");
+  }
+  updateSyncStatus(false);
+}
+
 
 
 // ============================================
@@ -1929,6 +2502,9 @@ if (typeof window !== 'undefined') {
     showCreateRoutineModal, confirmCreateRoutine, addDay, setDay, editDayTitle,
     toggleExercise, openEditModal, openAddModal, deleteExercise, updateWeight, deleteDay,
     handlePointerDown, openAddModal, renderProfile, renderRoutinesList, showAlert, showConfirm, showNamingModal,
-    showAddRoutineContextMenu, handleAddRoutinePointerDown, handleAddRoutinePointerUp, openCalendarModal, showCalendarDayDetail, showAIPlannerModal, createRoutinePrompt, createRoutine
+    showAddRoutineContextMenu, handleAddRoutinePointerDown, handleAddRoutinePointerUp, openCalendarModal,
+    showCalendarDayDetail, showAIPlannerModal, createRoutinePrompt, createRoutine,
+    showWeightLogModal, saveWeightLog, deleteWeightLog, showWeightHistoryModal, exportUserData, initWeightChart, saveSetPerformance,
+    toggleExerciseExpand, toggleSetStatus
   });
 }

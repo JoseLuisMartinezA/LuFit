@@ -11,7 +11,14 @@ export async function dbBatch(requests) {
             sql: req.sql,
             args: (req.args || []).map(a => {
                 if (typeof a === 'boolean') return { type: 'integer', value: a ? "1" : "0" };
-                if (typeof a === 'number') return { type: 'integer', value: a.toString() };
+                if (typeof a === 'number') {
+                    // Check if the number has decimals
+                    if (Number.isInteger(a)) {
+                        return { type: 'integer', value: a.toString() };
+                    } else {
+                        return { type: 'float', value: a };
+                    }
+                }
                 if (a === null) return { type: 'null' };
                 return { type: 'text', value: a.toString() };
             })

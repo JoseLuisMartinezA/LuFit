@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paleta de Colores LuFit - Dark Mode</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0c0c0e;
+            --panel-color: #1a1a1e;
+            --panel-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --lu-pink: #d81b60;
+            --lu-orange: #ff8a65;
+            --lu-gradient: linear-gradient(135deg, #d81b60, #ff8a65);
+            --lu-glass: rgba(30, 30, 35, 0.7);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 40px 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: var(--lu-glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--panel-border);
+            border-radius: 24px;
+            padding: 48px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        header h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin: 0;
+            background: var(--lu-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-top: 8px;
+        }
+
+        .palette-section {
+            margin-bottom: 40px;
+        }
+
+        .palette-section h2 {
+            font-size: 1.5rem;
+            margin-bottom: 24px;
+            border-left: 4px solid var(--lu-pink);
+            padding-left: 16px;
+            color: var(--text-primary);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .color-card {
+            background: var(--panel-color);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .color-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .color-preview {
+            height: 120px;
+            width: 100%;
+        }
+
+        .color-info {
+            padding: 16px;
+        }
+
+        .color-name {
+            display: block;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+        }
+
+        .color-hex {
+            font-family: monospace;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .usage {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            display: block;
+            line-height: 1.4;
+        }
+
+        /* Specific Previews */
+        .bg-color {
+            background-color: var(--bg-color);
+            border-bottom: 1px solid var(--panel-border);
+        }
+
+        .panel-color {
+            background-color: var(--panel-color);
+        }
+
+        .pink {
+            background-color: var(--lu-pink);
+        }
+
+        .orange {
+            background-color: var(--lu-orange);
+        }
+
+        .gradient {
+            background: var(--lu-gradient);
+        }
+
+        .glass {
+            background: var(--lu-glass);
+            border: 1px solid var(--panel-border);
+            backdrop-filter: blur(10px);
+        }
+
+        .text-p {
+            background-color: var(--text-primary);
+        }
+
+        .text-s {
+            background-color: var(--text-secondary);
+        }
+
+        footer {
+            margin-top: 48px;
+            text-align: center;
+            padding-top: 24px;
+            border-top: 1px solid var(--panel-border);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Paleta Dark Mode</h1>
+            <p>Guía de identidad visual para LuFit Evolution</p>
+        </header>
+
+        <div class="palette-section">
+            <h2>Colores de Marca</h2>
+            <div class="grid">
+                <div class="color-card">
+                    <div class="color-preview pink"></div>
+                    <div class="color-info">
+                        <span class="color-name">LuFit Pink</span>
+                        <code class="color-hex">#d81b60</code>
+                        <span class="usage">Color primario, botones críticos, iconos activos.</span>
+                    </div>
+                </div>
+                <div class="color-card">
+                    <div class="color-preview orange"></div>
+                    <div class="color-info">
+                        <span class="color-name">LuFit Orange</span>
+                        <code class="color-hex">#ff8a65</code>
+                        <span class="usage">Color de acento, progreso, avisos importantes.</span>
+                    </div>
+                </div>
+                <div class="color-card">
+                    <div class="color-preview gradient"></div>
+                    <div class="color-info">
+                        <span class="color-name">Branding Gradient</span>
+                        <code class="color-hex">Pink a Orange</code>
+                        <span class="usage">Cabeceras, CTAs principales, branding dinámico.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="palette-section">
+            <h2>Estructura y Fondo</h2>
+            <div class="grid">
+                <div class="color-card">
+                    <div class="color-preview bg-color"></div>
+                    <div class="color-info">
+                        <span class="color-name">Background</span>
+                        <code class="color-hex">#0c0c0e</code>
+                        <span class="usage">Fondo principal profundo de toda la aplicación.</span>
+                    </div>
+                </div>
+                <div class="color-card">
+                    <div class="color-preview panel-color"></div>
+                    <div class="color-info">
+                        <span class="color-name">Panel / Card</span>
+                        <code class="color-hex">#1a1a1e</code>
+                        <span class="usage">Color base para tarjetas, inputs y modales.</span>
+                    </div>
+                </div>
+                <div class="color-card">
+                    <div class="color-preview glass"></div>
+                    <div class="color-info">
+                        <span class="color-name">Glass Effect</span>
+                        <code class="color-hex">rgba(30,30,35,0.7)</code>
+                        <span class="usage">Efecto traslúcido con desenfoque para navegación.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="palette-section">
+            <h2>Tipografía</h2>
+            <div class="grid">
+                <div class="color-card">
+                    <div class="color-preview text-p"></div>
+                    <div class="color-info">
+                        <span class="color-name">Text Primary</span>
+                        <code class="color-hex">#f8fafc</code>
+                        <span class="usage">Títulos, cuerpo de texto principal, alto contraste.</span>
+                    </div>
+                </div>
+                <div class="color-card">
+                    <div class="color-preview text-s"></div>
+                    <div class="color-info">
+                        <span class="color-name">Text Secondary</span>
+                        <code class="color-hex">#94a3b8</code>
+                        <span class="usage">Descripciones, placeholders, etiquetas menores.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            LuFit Evolution &copy; 2026 - Diseño de Interfaz Premium
+        </footer>
+    </div>
+</body>
+
+</html>

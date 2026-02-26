@@ -11,7 +11,9 @@ export const state = {
     currentDay: 1,
     currentExercises: [],
     dayTitles: {},
-    currentView: 'dashboard'
+    dayOrder: [],
+    currentView: 'dashboard',
+    expandedExercises: [] // Track expanded exercise IDs
 };
 
 export function setCurrentUser(user) {

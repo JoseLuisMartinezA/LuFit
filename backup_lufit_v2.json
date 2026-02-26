@@ -1,0 +1,853 @@
+{
+  "lucia": {
+    "profile": [
+      [
+        {
+          "type": "integer",
+          "value": "1"
+        },
+        {
+          "type": "float",
+          "value": 60
+        },
+        {
+          "type": "float",
+          "value": 158
+        },
+        {
+          "type": "integer",
+          "value": "19"
+        },
+        {
+          "type": "text",
+          "value": "female"
+        },
+        {
+          "type": "integer",
+          "value": "10000"
+        },
+        {
+          "type": "text",
+          "value": "2026-01-28T18:19:30.503Z"
+        },
+        {
+          "type": "text",
+          "value": "kg"
+        }
+      ]
+    ],
+    "routines": [
+      [
+        {
+          "type": "integer",
+          "value": "12"
+        },
+        {
+          "type": "integer",
+          "value": "1"
+        },
+        {
+          "type": "text",
+          "value": "Rutina Principal Lucía"
+        },
+        {
+          "type": "integer",
+          "value": "1"
+        },
+        {
+          "type": "integer",
+          "value": "4"
+        },
+        {
+          "type": "text",
+          "value": "2026-01-30T16:14:35.345Z"
+        }
+      ]
+    ],
+    "weeks": [
+      {
+        "weekName": "Semana 1",
+        "exercises": [
+          {
+            "name": "25",
+            "series": "3 x 8",
+            "weight": "10, 12’5, 15  ",
+            "completed": "1"
+          },
+          {
+            "name": "11",
+            "series": "4 x 12",
+            "weight": "20-25-30-35 ",
+            "completed": "1"
+          },
+          {
+            "name": "Remo",
+            "series": "3 x 12-10-8",
+            "weight": "20-25-30",
+            "completed": "1"
+          },
+          {
+            "name": "Sentadilla Goblet",
+            "series": "4 x 12-15",
+            "completed": "0"
+          },
+          {
+            "name": "20",
+            "series": "3 x 15",
+            "completed": "0"
+          },
+          {
+            "name": "Step-up (Cajón)",
+            "series": "3 x 12 por pierna.",
+            "completed": "0"
+          },
+          {
+            "name": "22",
+            "series": "3 x 15-20",
+            "completed": "0"
+          },
+          {
+            "name": "27",
+            "series": "3 x 15",
+            "completed": "0"
+          },
+          {
+            "name": "20",
+            "series": "3 x 8",
+            "weight": "67’5, 75, 82’5",
+            "completed": "1"
+          },
+          {
+            "name": "27",
+            "series": "3 x 8",
+            "weight": "25,30,35",
+            "completed": "1"
+          },
+          {
+            "name": "22",
+            "series": "3 x 12",
+            "weight": 40,
+            "completed": "1"
+          },
+          {
+            "name": "12",
+            "series": "4 x 10",
+            "weight": "5-10-12,5-15",
+            "completed": "1"
+          },
+          {
+            "name": "38",
+            "series": "3 x 8",
+            "weight": "barra, 1’25, 2’5",
+            "completed": "1"
+          },
+          {
+            "name": "18",
+            "series": "4 x 8-8-6-6",
+            "weight": "2’5, 5, 7’25, 10 ",
+            "completed": "1"
+          },
+          {
+            "name": "20",
+            "series": "4 x 12-10-8-6",
+            "weight": "60, 67, 75,82",
+            "completed": "1"
+          },
+          {
+            "name": "27",
+            "series": "3 x 12-10-8",
+            "weight": "25,30,35",
+            "completed": "1"
+          },
+          {
+            "name": "22",
+            "series": "3 x 12-10-8",
+            "weight": "30-35-40",
+            "completed": "1"
+          }
+        ]
+      },
+      {
+        "weekName": "Semana 2",
+        "exercises": [
+          {
+            "name": "11",
+            "series": "4 x 12",
+            "weight": "20-25-30-35 ",
+            "completed": "1"
+          },
+          {
+            "name": "Remo",
+            "series": "3 x 12-10-8",
+            "weight": "20-25-30",
+            "completed": "1"
+          },
+          {
+            "name": "Sentadilla Goblet",
+            "series": "4 x 12-15",
+            "completed": "0"
+          },
+          {
+            "name": "20",
+            "series": "3 x 15",
+            "completed": "0"
+          },
+          {
+            "name": "Step-up (Cajón)",
+            "series": "3 x 12 por pierna.",
+            "completed": "0"
+          },
+          {
+            "name": "22",
+            "series": "3 x 15-20",
+            "completed": "0"
+          },
+          {
+            "name": "27",
+            "series": "3 x 15",
+            "completed": "0"
+          },
+          {
+            "name": "28",
+            "series": "3 x 8-10",
+            "completed": "0"
+          },
+          {
+            "name": "25",
+            "series": "3 x 8",
+            "completed": "0"
+          },
+          {
+            "name": "24",
+            "series": "3 x 8-10",
+            "weight": "5-7-9",
+            "completed": "0"
+          },
+          {
+            "name": "29",
+            "series": "4 x 12",
+            "completed": "0"
+          },
+          {
+            "name": "12",
+            "series": "4 x 10",
+            "weight": "5-10-12,5-15",
+            "completed": "1"
+          },
+          {
+            "name": "38",
+            "series": "3 x 8",
+            "weight": "barra, 1’25, 2’5",
+            "completed": "1"
+          },
+          {
+            "name": "18",
+            "series": "4 x 8,8,6,6",
+            "weight": "2’5kg, 5kg, 7’25kg, 10 kg ",
+            "completed": "0"
+          },
+          {
+            "name": "20",
+            "series": "3 x 8",
+            "completed": "0"
+          }
+        ]
+      },
+      {
+        "weekName": "semana 9-15 feb",
+        "exercises": [
+          {
+            "name": "11",
+            "series": "4 x 12",
+            "weight": "20🟢-25🟢-25🟢-30🟠",
+            "completed": "1"
+          },
+          {
+            "name": "Remo",
+            "series": "3 x 12-10-8",
+            "weight": "20🟢-25🟢-30🟢",
+            "completed": "1"
+          },
+          {
+            "name": "Sentadilla Goblet",
+            "series": "4 x 12-15",
+            "completed": "0"
+          },
+          {
+            "name": "20",
+            "series": "3 x 15",
+            "completed": "0"
+          },
+          {
+            "name": "Step-up (Cajón)",
+            "series": "3 x 12 por pierna.",
+            "completed": "0"
+          },
+          {
+            "name": "22",
+            "series": "3 x 15-20",
+            "completed": "0"
+          },
+          {
+            "name": "27",
+            "series": "3 x 15",
+            "completed": "0"
+          },
+          {
+            "name": "28",
+            "series": "3 x 8-10",
+            "completed": "0"
+          },
+          {
+            "name": "25",
+            "series": "3 x 8",
+            "completed": "0"
+          },
+          {
+            "name": "24",
+            "series": "3 x 8-10",
+            "weight": "5-7-9",
+            "completed": "0"
+          },
+          {
+            "name": "29",
+            "series": "4 x 12",
+            "completed": "0"
+          },
+          {
+            "name": "12",
+            "series": "3 x 10",
+            "weight": "5🟢-10🟢-12,5🟠",
+            "completed": "1"
+          },
+          {
+            "name": "38",
+            "series": "3 x 10-8-6",
+            "weight": "barra🟢, 1’25🟢, 2’5🟠",
+            "completed": "1"
+          },
+          {
+            "name": "24",
+            "series": "3 x 12-10-8",
+            "weight": "6-7-9 ",
+            "completed": "1"
+          },
+          {
+            "name": "25",
+            "series": "3 x 8",
+            "weight": "12’5-15",
+            "completed": "1"
+          },
+          {
+            "name": "29",
+            "series": "3 x 8-10",
+            "weight": 5,
+            "completed": "1"
+          },
+          {
+            "name": "28",
+            "series": "4 x 8-10",
+            "weight": "10-27’5-35-40",
+            "completed": "1"
+          },
+          {
+            "name": "Pullover",
+            "series": "3 x 15",
+            "weight": "5🟢-7’5🟢-10 (8)🟠",
+            "completed": "1"
+          },
+          {
+            "name": "40",
+            "series": "3 x 12-10-8",
+            "weight": "4🟢,5🟢,6🟠",
+            "completed": "1"
+          }
+        ]
+      }
+    ],
+    "weight_logs": []
+  },
+  "jose": {
+    "profile": [
+      [
+        {
+          "type": "integer",
+          "value": "2"
+        },
+        {
+          "type": "float",
+          "value": 60
+        },
+        {
+          "type": "float",
+          "value": 158
+        },
+        {
+          "type": "integer",
+          "value": "19"
+        },
+        {
+          "type": "text",
+          "value": "female"
+        },
+        {
+          "type": "integer",
+          "value": "10000"
+        },
+        {
+          "type": "text",
+          "value": "2026-01-28T20:25:03.297Z"
+        },
+        {
+          "type": "text",
+          "value": "kg"
+        }
+      ]
+    ],
+    "routines": [
+      [
+        {
+          "type": "integer",
+          "value": "8"
+        },
+        {
+          "type": "integer",
+          "value": "2"
+        },
+        {
+          "type": "text",
+          "value": "Rutina Inicial"
+        },
+        {
+          "type": "integer",
+          "value": "1"
+        },
+        {
+          "type": "integer",
+          "value": "4"
+        },
+        {
+          "type": "text",
+          "value": "2026-01-28T20:25:03.564Z"
+        }
+      ]
+    ],
+    "weeks": [
+      {
+        "weekName": "Semana 1",
+        "exercises": [
+          {
+            "name": "18",
+            "series": "4 x 8-6",
+            "weight": "5 10 15 20",
+            "completed": "1"
+          },
+          {
+            "name": "20",
+            "series": "4 x 12-10-8-6",
+            "weight": "60 -82",
+            "completed": "1"
+          },
+          {
+            "name": "25",
+            "series": "3 x 10-8-6",
+            "weight": "sin hacer.",
+            "completed": "0"
+          },
+          {
+            "name": "22",
+            "series": "3 x 15-12-10",
+            "weight": "40 45 50",
+            "completed": "1"
+          },
+          {
+            "name": "30",
+            "series": "4 x 15",
+            "weight": "sin hacer.",
+            "completed": "0"
+          },
+          {
+            "name": "11",
+            "series": "4 x 6-8",
+            "weight": "30 40 50 60",
+            "completed": "1"
+          },
+          {
+            "name": "12",
+            "series": "4 x 10-8-6",
+            "weight": "10 20 30",
+            "completed": "1"
+          },
+          {
+            "name": "Remo en Máquina",
+            "series": "3 x 12-10-8",
+            "weight": "35 45 55",
+            "completed": "1"
+          },
+          {
+            "name": "9",
+            "series": "3 x 15",
+            "weight": "sin hacer.",
+            "completed": "0"
+          },
+          {
+            "name": "38",
+            "series": "3 x 10-8-6",
+            "weight": "5 10 15",
+            "completed": "1"
+          },
+          {
+            "name": "39",
+            "series": "3 x 12-10-8",
+            "weight": "sin hacer.",
+            "completed": "0"
+          },
+          {
+            "name": "1",
+            "series": "4 x 12-10-8-6",
+            "weight": "10 15 20 25",
+            "completed": "1"
+          },
+          {
+            "name": "4",
+            "series": "4 x 12-10-8-6",
+            "weight": "10  12.5 15 17.5",
+            "completed": "1"
+          },
+          {
+            "name": "Aperturas (Indistinto)",
+            "series": "3 x 15-12-10",
+            "weight": "30 35 30 30",
+            "completed": "1"
+          },
+          {
+            "name": "7",
+            "series": "3 x MÁX",
+            "weight": "40 30 20",
+            "completed": "1"
+          },
+          {
+            "name": "43",
+            "series": "3 x 12-10-8",
+            "weight": "0 5 10",
+            "completed": "1"
+          },
+          {
+            "name": "44",
+            "series": "3 x 15",
+            "weight": "10 15 20",
+            "completed": "1"
+          },
+          {
+            "name": "32",
+            "series": "4 x 8-6",
+            "completed": "0"
+          },
+          {
+            "name": "34",
+            "series": "4 x 15-12-10-8",
+            "completed": "0"
+          },
+          {
+            "name": "36",
+            "series": "3 x 15",
+            "completed": "0"
+          },
+          {
+            "name": "37",
+            "series": "3 x 12",
+            "completed": "0"
+          },
+          {
+            "name": "Encogimientos",
+            "series": "4 x 15",
+            "completed": "0"
+          },
+          {
+            "name": "27",
+            "series": "3 x 12-10-8",
+            "weight": "30 35 40",
+            "completed": "1"
+          }
+        ]
+      },
+      {
+        "weekName": "Semana 2",
+        "exercises": [
+          {
+            "name": "18",
+            "series": "4 x 8-6",
+            "weight": "5 10 15 20",
+            "completed": "0"
+          },
+          {
+            "name": "20",
+            "series": "4 x 12-10-8-6",
+            "weight": "60 -82",
+            "completed": "0"
+          },
+          {
+            "name": "25",
+            "series": "3 x 10-8-6",
+            "weight": "sin hacer.",
+            "completed": "0"
+          },
+          {
+            "name": "22",
+            "series": "3 x 15-12-10",
+            "weight": "40 45 50",
+            "completed": "0"
+          },
+          {
+            "name": "30",
+            "series": "4 x 15",
+            "weight": "sin hacer.",
+            "completed": "0"
+          },
+          {
+            "name": "11",
+            "series": "4 x 6-8",
+            "weight": "30 🟢40 50 60🟠",
+            "completed": "1"
+          },
+          {
+            "name": "12",
+            "series": "4 x 10-8-6",
+            "weight": "10 20 30",
+            "completed": "1"
+          },
+          {
+            "name": "Remo en Máquina",
+            "series": "3 x 12-10-8",
+            "weight": "40 50 60",
+            "completed": "1"
+          },
+          {
+            "name": "9",
+            "series": "3 x 15",
+            "weight": "10 15 20 (8)",
+            "completed": "1"
+          },
+          {
+            "name": "38",
+            "series": "3 x 10-8-6",
+            "weight": "5 10 15",
+            "completed": "1"
+          },
+          {
+            "name": "39",
+            "series": "3 x 12-10-8",
+            "weight": "sin hacer.",
+            "completed": "0"
+          },
+          {
+            "name": "1",
+            "series": "4 x 12-10-8-6",
+            "weight": "15 20 25 30",
+            "completed": "1"
+          },
+          {
+            "name": "4",
+            "series": "4 x 12-10-8",
+            "weight": "10  15 20",
+            "completed": "1"
+          },
+          {
+            "name": "Aperturas (Indistinto)",
+            "series": "3 x 15-12-10",
+            "weight": "20 25 30",
+            "completed": "1"
+          },
+          {
+            "name": "7",
+            "series": "2 x MÁX",
+            "weight": "libre",
+            "completed": "1"
+          },
+          {
+            "name": "43",
+            "series": "3 x 12-10-8",
+            "weight": "0 5 10",
+            "completed": "0"
+          },
+          {
+            "name": "44",
+            "series": "3 x 15",
+            "weight": "10 15 20",
+            "completed": "0"
+          },
+          {
+            "name": "32",
+            "series": "4 x 8-6",
+            "completed": "0"
+          },
+          {
+            "name": "34",
+            "series": "4 x 15-12-10-8",
+            "completed": "0"
+          },
+          {
+            "name": "36",
+            "series": "3 x 15",
+            "completed": "0"
+          },
+          {
+            "name": "37",
+            "series": "3 x 12",
+            "completed": "0"
+          },
+          {
+            "name": "Encogimientos",
+            "series": "4 x 15",
+            "completed": "0"
+          },
+          {
+            "name": "27",
+            "series": "3 x 12-10-8",
+            "weight": "30 35 40",
+            "completed": "0"
+          }
+        ]
+      },
+      {
+        "weekName": "Semana 3",
+        "exercises": [
+          {
+            "name": "18",
+            "series": "4 x 8-6",
+            "weight": "5 10 15 20",
+            "completed": "0"
+          },
+          {
+            "name": "20",
+            "series": "4 x 12-10-8-6",
+            "weight": "60 -82",
+            "completed": "0"
+          },
+          {
+            "name": "25",
+            "series": "3 x 10-8-6",
+            "weight": "sin hacer.",
+            "completed": "0"
+          },
+          {
+            "name": "22",
+            "series": "3 x 15-12-10",
+            "weight": "40 45 50",
+            "completed": "0"
+          },
+          {
+            "name": "30",
+            "series": "4 x 15",
+            "weight": "sin hacer.",
+            "completed": "0"
+          },
+          {
+            "name": "11",
+            "series": "4 x 6-8",
+            "weight": "30 40 45 50",
+            "completed": "1"
+          },
+          {
+            "name": "Remo en Máquina",
+            "series": "3 x 12-10-8",
+            "weight": "40 50 60",
+            "completed": "1"
+          },
+          {
+            "name": "9",
+            "series": "3 x 15",
+            "weight": "10 15 15 🟢",
+            "completed": "1"
+          },
+          {
+            "name": "38",
+            "series": "3 x 10-8-6",
+            "weight": "5 10 15",
+            "completed": "1"
+          },
+          {
+            "name": "39",
+            "series": "3 x 12-10-8",
+            "weight": "10 12,5 15",
+            "completed": "1"
+          },
+          {
+            "name": "1",
+            "series": "4 x 12-10-8-6",
+            "weight": "15 20 25 30",
+            "completed": "0"
+          },
+          {
+            "name": "4",
+            "series": "4 x 12-10-8",
+            "weight": "10  15 20",
+            "completed": "0"
+          },
+          {
+            "name": "Aperturas (Indistinto)",
+            "series": "3 x 15-12-10",
+            "weight": "20 25 30",
+            "completed": "0"
+          },
+          {
+            "name": "7",
+            "series": "2 x MÁX",
+            "weight": "libre",
+            "completed": "0"
+          },
+          {
+            "name": "43",
+            "series": "3 x 12-10-8",
+            "weight": "0 5 10",
+            "completed": "0"
+          },
+          {
+            "name": "44",
+            "series": "3 x 15",
+            "weight": "10 15 20",
+            "completed": "0"
+          },
+          {
+            "name": "32",
+            "series": "4 x 8-6",
+            "completed": "0"
+          },
+          {
+            "name": "34",
+            "series": "4 x 15-12-10-8",
+            "completed": "0"
+          },
+          {
+            "name": "36",
+            "series": "3 x 15",
+            "completed": "0"
+          },
+          {
+            "name": "37",
+            "series": "3 x 12",
+            "completed": "0"
+          },
+          {
+            "name": "Encogimientos",
+            "series": "4 x 15",
+            "completed": "0"
+          },
+          {
+            "name": "27",
+            "series": "3 x 12-10-8",
+            "weight": "30 35 40",
+            "completed": "0"
+          },
+          {
+            "name": "17",
+            "series": "3 x 15",
+            "weight": "10 15 20",
+            "completed": "1"
+          }
+        ]
+      }
+    ],
+    "weight_logs": []
+  }
+}

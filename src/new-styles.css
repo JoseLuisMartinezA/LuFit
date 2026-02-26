@@ -34,16 +34,18 @@
 }
 
 :root {
-  --bg-color: #08080a;
-  --panel-color: #121215;
-  --panel-border: rgba(255, 255, 255, 0.06);
-  --text-primary: #ffffff;
+  --bg-color: #0c0c0e;
+  --panel-color: #1a1a1e;
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
 
   /* LuFit Brand Palette */
   --lu-pink: #d81b60;
   --lu-orange: #ff8a65;
   --lu-gradient: linear-gradient(135deg, #d81b60, #ff8a65);
+  --lu-glass: rgba(30, 30, 35, 0.7);
+  --lu-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.3);
 
   --accent-1: #d81b60;
   /* Pink */
@@ -54,27 +56,75 @@
   --accent-4: #2563eb;
   /* Blue */
 
-  --radius-lg: 24px;
-  --radius-md: 16px;
+  --radius-lg: 12px;
+  --radius-md: 8px;
+  --radius-sm: 4px;
   --font-main: 'Outfit', sans-serif;
-  --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass {
+  background: var(--lu-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--panel-border);
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #1e1e22 25%, #2a2a30 50%, #1e1e22 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+  border-radius: 8px;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Chart Container */
+.chart-container {
+  background: var(--panel-color);
+  padding: 16px;
+  border-radius: var(--radius-md);
+  margin-bottom: 20px;
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--lu-shadow);
 }
 
 /* Light Mode Overrides */
 body.light-mode {
-  --bg-color: #cbd5e1;
-  /* Base gray background */
-  --panel-color: #f1f5f9;
-  /* Soft gray for panels */
-  --panel-border: #94a3b8;
-  /* Defined borders */
-  --text-primary: #111827;
-  /* Very dark gray, not pure black */
-  --text-secondary: #374151;
-  /* Darker slate gray */
+  --bg-color: #f4f6f8;
+  --panel-color: #ffffff;
+  --panel-border: rgba(0, 0, 0, 0.08);
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --lu-glass: rgba(255, 255, 255, 0.85);
+  --lu-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
   background-image:
-    radial-gradient(at 0% 0%, rgba(216, 27, 96, 0.05) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(255, 138, 101, 0.05) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(216, 27, 96, 0.03) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(255, 138, 101, 0.03) 0px, transparent 50%);
 }
 
 /* Global Dark Text enforcement in Light Mode */
@@ -144,22 +194,21 @@ body.light-mode .search-item {
 }
 
 body.light-mode .search-results-dropdown {
-  background: #f1f5f9 !important;
-  border-color: #94a3b8 !important;
+  background: var(--panel-color) !important;
+  border-color: var(--panel-border) !important;
 }
 
 body.light-mode .feedback-modal {
-  background: #f1f5f9 !important;
+  background: var(--panel-color) !important;
 }
 
 body.light-mode .feedback-option {
-  background: #e2e8f0 !important;
-  border-color: #94a3b8 !important;
+  background: #f1f5f9 !important;
+  border-color: var(--panel-border) !important;
 }
 
 body.light-mode .history-bar-container {
-  background: #94a3b8 !important;
-  /* Slightly darker gray for the bar container */
+  background: #e2e8f0 !important;
 }
 
 body.light-mode .history-bar {
@@ -178,22 +227,20 @@ body.light-mode .history-item,
 body.light-mode .account-dropdown {
   background: var(--panel-color) !important;
   border: 1px solid var(--panel-border) !important;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05) !important;
+  box-shadow: var(--lu-shadow) !important;
 }
 
 /* Individualized Exercise Card for Light Mode */
 body.light-mode .exercise-card {
   background: var(--panel-color) !important;
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  /* Subtle border to let bands stand out */
-  border-left-width: 4px !important;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--panel-border) !important;
+  box-shadow: var(--lu-shadow);
 }
 
 body.light-mode .exercise-card.completed {
-  background: #e2e8f0 !important;
+  background: #f8fafc !important;
   opacity: 0.8;
-  border-color: rgba(148, 163, 184, 0.2);
+  border-color: var(--panel-border);
 }
 
 /* Exercise Completed Tick */
@@ -204,7 +251,7 @@ body.light-mode .exercise-card.completed .checkmark {
 }
 
 body.light-mode .checkmark {
-  border: 2px solid #94a3b8;
+  border: 2px solid var(--text-secondary);
 }
 
 /* Interaction elements: Deeper Grays */
@@ -217,16 +264,15 @@ body.light-mode .input-group select,
 body.light-mode .exercise-extra input,
 body.light-mode .account-icon-btn,
 body.light-mode #week-select {
-  background: #e2e8f0 !important;
+  background: #f1f5f9 !important;
   border: 1px solid var(--panel-border) !important;
   color: var(--text-primary) !important;
 }
 
 /* Timer Popup Specifics */
 body.light-mode .timer-card {
-  background: #cbd5e1 !important;
-  /* Darker background for popup */
-  border-color: #94a3b8 !important;
+  background: #f1f5f9 !important;
+  border-color: var(--panel-border) !important;
 }
 
 body.light-mode .timer-btn:not(.primary) {
@@ -246,16 +292,16 @@ body.light-mode .secondary-btn:hover,
 body.light-mode .day-tab:not(.active):hover,
 body.light-mode .exercise-card:hover,
 body.light-mode .routine-card:hover {
-  background: #cbd5e1 !important;
+  background: #e2e8f0 !important;
 }
 
 body.light-mode .bottom-nav {
-  background: rgba(203, 213, 225, 0.98) !important;
+  background: var(--lu-glass) !important;
   border-top: 1px solid var(--panel-border) !important;
 }
 
 body.light-mode .day-selector {
-  background: #e2e8f0 !important;
+  background: #f1f5f9 !important;
   border-color: var(--panel-border) !important;
 }
 
@@ -266,12 +312,56 @@ body.light-mode .modal {
 /* SVG and Visual Elements */
 body.light-mode .steps-circle-container circle:first-child,
 body.light-mode .timer-progress-ring__bg {
-  stroke: #94a3b8 !important;
+  stroke: #e2e8f0 !important;
+}
+
+body.light-mode .exercise-card {
+  background: var(--panel-color) !important;
+  color: var(--text-primary) !important;
+}
+
+body.light-mode .exercise-name {
+  color: var(--text-primary) !important;
+}
+
+body.light-mode .exercise-logs {
+  background: #f8fafc !important;
+  border-color: var(--panel-border) !important;
+}
+
+body.light-mode .set-row {
+  border-top-color: var(--panel-border) !important;
+}
+
+body.light-mode .effort-box {
+  background: #f1f5f9 !important;
+  border-color: var(--panel-border) !important;
+}
+
+body.light-mode .log-input {
+  background: var(--panel-color) !important;
+  border-color: var(--panel-border) !important;
+  color: var(--text-primary) !important;
+}
+
+body.light-mode .log-input:focus {
+  background: #ffffff !important;
+  border-color: var(--lu-pink) !important;
+}
+
+body.light-mode .log-input::placeholder {
+  color: #94a3b8 !important;
 }
 
 body.light-mode .exercise-card.completed {
-  background: #e2e8f0 !important;
+  background: #f8fafc !important;
   opacity: 0.8;
+}
+
+body.light-mode .action-btn {
+  background: #f1f5f9 !important;
+  border-color: var(--panel-border) !important;
+  color: var(--text-primary) !important;
 }
 
 /* Login Screen Background Override */
@@ -296,7 +386,7 @@ body.light-mode .login-screen {
 
 .login-card {
   background: var(--panel-color);
-  padding: 40px 30px;
+  padding: 30px 24px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--panel-border);
   width: 100%;
@@ -320,20 +410,20 @@ body.light-mode .login-screen {
 .login-card p {
   color: var(--text-secondary);
   font-size: 0.95rem;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .login-form input {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--panel-border);
-  padding: 16px;
-  border-radius: 14px;
+  padding: 12px 14px;
+  border-radius: 8px;
   color: white;
   font-family: inherit;
   font-size: 1rem;
@@ -357,8 +447,8 @@ body.light-mode .login-screen {
   background: var(--lu-gradient);
   color: white;
   border: none;
-  padding: 16px;
-  border-radius: 14px;
+  padding: 14px;
+  border-radius: 8px;
   font-weight: 700;
   font-size: 1rem;
   cursor: pointer;
@@ -828,7 +918,7 @@ input {
 .feedback-option {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--panel-border);
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 16px;
   cursor: pointer;
   transition: var(--transition);
@@ -1189,12 +1279,12 @@ body.is-dragging * {
 .day-selector {
   display: flex;
   background: var(--panel-color);
-  padding: 6px;
-  border-radius: 100px;
+  padding: 4px;
+  border-radius: 12px;
   border: 1px solid var(--panel-border);
-  margin-bottom: 32px;
+  margin-bottom: 20px;
   position: sticky;
-  top: 20px;
+  top: 10px;
   z-index: 100;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -1205,11 +1295,11 @@ body.is-dragging * {
   border: none;
   background: transparent;
   color: var(--text-secondary);
-  padding: 10px;
+  padding: 8px;
   font-family: inherit;
   font-weight: 600;
   cursor: pointer;
-  border-radius: 100px;
+  border-radius: 8px;
   transition: var(--transition);
 }
 
@@ -1274,11 +1364,11 @@ body.is-dragging * {
 
 .day-tag {
   display: inline-block;
-  padding: 4px 12px;
-  border-radius: 100px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  margin-bottom: 12px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 8px;
 }
 
 /* Exercise Cards */
@@ -3147,4 +3237,357 @@ body {
 .dashboard-promo-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(255, 255, 255, 0.15);
+}
+
+/* Exercise Card Improvements */
+.weight-input-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  transition: var(--transition);
+}
+
+.weight-input-container:focus-within {
+  border-color: var(--lu-pink);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.weight-input-container input {
+  background: none;
+  border: none;
+  color: white;
+  width: 60px;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  outline: none;
+  text-align: right;
+}
+
+.weight-unit {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+/* Modal Improvements */
+.glass-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid var(--panel-border) !important;
+  color: white !important;
+  padding: 14px !important;
+  border-radius: 12px !important;
+  font-family: inherit !important;
+  outline: none !important;
+  transition: var(--transition) !important;
+}
+
+.glass-input:focus {
+  border-color: var(--lu-pink) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 0 0 4px rgba(216, 27, 96, 0.1) !important;
+}
+
+.full-width {
+  width: 100%;
+}
+
+/* Set Logging Improvements */
+.exercise-logs {
+  margin-top: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid var(--panel-border);
+}
+
+.sets-header {
+  display: grid;
+  grid-template-columns: 40px 1fr 1fr;
+  gap: 12px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 8px;
+  padding: 0 8px;
+}
+
+.set-row {
+  display: grid;
+  grid-template-columns: 40px 1fr 1fr;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: var(--transition);
+}
+
+.set-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.set-num {
+  font-weight: 700;
+  color: var(--lu-pink);
+  font-size: 0.9rem;
+}
+
+.set-row input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  color: white;
+  padding: 8px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+  outline: none;
+  transition: var(--transition);
+}
+
+.set-row input:focus {
+  border-color: var(--lu-pink);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.set-row input::placeholder {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+/* Collapsible Exercise Cards */
+.exercise-card.collapsed .exercise-logs {
+  display: none;
+}
+
+.exercise-main {
+  cursor: pointer;
+}
+
+/* Set Ticks & Effort Indicators */
+.set-tick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.tick-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--panel-border);
+  background: none;
+  color: white;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.tick-btn.active {
+  background: rgba(216, 27, 96, 0.2);
+  border-color: var(--lu-pink);
+}
+
+.effort-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: transparent;
+}
+
+/* Modal Improvements for Per-set */
+.feedback-options.mini {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.feedback-options.mini .feedback-option {
+  padding: 12px;
+  font-size: 0.9rem;
+}
+
+/* -------------------------------------------------------------------------- */
+/* LU-FIT DESIGN OVERHAUL (IMAGE ALIGNMENT)                                   */
+/* -------------------------------------------------------------------------- */
+
+.exercise-card {
+  background: #111114 !important;
+  border: 1px solid var(--panel-border) !important;
+  padding: 12px 18px !important;
+  margin-bottom: 8px !important;
+  border-radius: 12px !important;
+  transition: var(--transition) !important;
+}
+
+.exercise-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0;
+}
+
+.exercise-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.exercise-name {
+  font-size: 1.1rem !important;
+  font-weight: 800 !important;
+  color: white !important;
+}
+
+.exercise-sets {
+  font-size: 0.9rem !important;
+  color: #94a3b8 !important;
+  font-weight: 600 !important;
+}
+
+.card-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.action-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.action-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Logging Container */
+.exercise-logs {
+  margin-top: 12px;
+  background: #09090b;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.sets-header {
+  display: grid;
+  grid-template-columns: 80px 100px 1fr 1fr;
+  gap: 15px;
+  padding: 0 0 12px 0;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+.set-row {
+  display: grid;
+  grid-template-columns: 80px 100px 1fr 1fr;
+  gap: 15px;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.set-num {
+  color: var(--lu-pink) !important;
+  font-weight: 800 !important;
+  font-size: 1.1rem !important;
+  text-align: center;
+}
+
+/* Effort Indicator (Image Style) */
+.effort-box {
+  width: 26px;
+  height: 26px;
+  background: #1e1e22;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  margin: 0 auto;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.effort-box.light {
+  background: #22c55e !important;
+  border-color: #22c55e !important;
+}
+
+.effort-box.optimal {
+  background: #f59e0b !important;
+  border-color: #f59e0b !important;
+}
+
+.effort-box.excessive {
+  background: #ef4444 !important;
+  border-color: #ef4444 !important;
+}
+
+/* Log Inputs */
+.log-input {
+  background: #1a1a1e !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 6px !important;
+  color: white !important;
+  padding: 8px !important;
+  font-family: inherit !important;
+  font-size: 0.95rem !important;
+  font-weight: 800 !important;
+  text-align: center !important;
+  width: 100% !important;
+  outline: none !important;
+  transition: var(--transition) !important;
+}
+
+.log-input:focus {
+  border-color: var(--lu-pink) !important;
+  background: #202025 !important;
+}
+
+.log-input::placeholder {
+  color: #3f3f46 !important;
+  font-weight: 600 !important;
+}
+
+/* Completion state */
+.exercise-card.completed {
+  border-color: var(--lu-pink) !important;
+  box-shadow: 0 0 20px rgba(216, 27, 96, 0.05);
+}
+
+.exercise-card.collapsed .exercise-logs {
+  display: none;
 }

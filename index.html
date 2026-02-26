@@ -101,6 +101,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="LuFit">
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="src/new-styles.css">
   <link rel="manifest" href="./manifest.json">
@@ -123,10 +124,10 @@
 
       <!-- View: Login -->
       <div id="login-view">
-        <h2>Bienvenida a LuFit</h2>
-        <p>Inicia sesión para ver tus rutinas</p>
+        <h2>Bienvenida de nuevo</h2>
+        <p>Inicia sesión para ver tus progresos</p>
         <div class="login-form">
-          <input type="text" id="login-username" placeholder="Nombre de Usuario">
+          <input type="text" id="login-username" placeholder="Usuario">
           <input type="password" id="login-password" placeholder="Contraseña">
           <p id="login-error" class="login-error"></p>
           <button onclick="window.login()" class="primary-btn">Entrar</button>
@@ -136,11 +137,11 @@
 
       <!-- View: Register -->
       <div id="register-view" style="display: none;">
-        <h2>Crear Cuenta</h2>
-        <p>Regístrate para guardar tu progreso</p>
+        <h2>Regístrate en LuFit</h2>
+        <p>Tu camino al éxito empieza aquí</p>
         <div class="login-form">
-          <input type="text" id="reg-username" placeholder="Nombre de Usuario">
-          <input type="password" id="reg-password" placeholder="Contraseña">
+          <input type="text" id="reg-username" placeholder="Usuario nuevo">
+          <input type="password" id="reg-password" placeholder="Contraseña de acceso">
           <p id="reg-error" class="login-error"></p>
           <button onclick="window.register()" class="primary-btn">Registrarse</button>
           <button onclick="window.showLoginView()" class="text-link-btn">Ya tengo cuenta</button>
@@ -160,31 +161,19 @@
 
     <main class="container">
       <!-- DASHBOARD VIEW -->
-      <div id="dashboard-view" style="display: none;">
-        <div id="dashboard-content">
+      <section id="dashboard-view" style="display: none;">
+        <div id="dashboard-content" class="fade-in">
           <!-- Rendered dynamically -->
         </div>
-      </div>
-
-      <!-- ROUTINES LIST VIEW -->
-      <div id="routines-list-view" style="display: none;">
-        <div id="routines-list-content">
-          <!-- Rendered dynamically -->
-        </div>
-      </div>
+      </section>
 
       <!-- ROUTINE DETAIL VIEW -->
-      <div id="routine-detail-view" style="display: none;">
-        <div id="routine-detail-content">
-          <!-- Rendered dynamically -->
-        </div>
+      <section id="routine-detail-view" style="display: none;">
+        <div id="routine-tabs-container"></div>
 
-        <!-- Week & Day Selection -->
-        <section class="selection-area">
+        <div class="selection-area fade-in">
           <div class="week-manager">
-            <select id="week-select" class="week-select">
-              <!-- Dynamically populated -->
-            </select>
+            <select id="week-select" class="week-select"></select>
             <div class="week-actions">
               <button id="add-week-btn" class="secondary-btn">＋ Añadir</button>
               <button id="rename-week-btn" class="secondary-btn">Renombrar</button>
@@ -195,41 +184,31 @@
           <nav class="day-selector">
             <!-- Dynamically populated -->
           </nav>
-        </section>
+        </div>
 
         <!-- Routine Content -->
-        <section id="routine-content" class="routine-viewer">
+        <div id="routine-content" class="routine-viewer fade-in">
           <!-- Dynamically populated -->
-        </section>
-
-
-      </div>
+        </div>
+      </section>
 
       <!-- PROFILE VIEW -->
-      <div id="profile-view" style="display: none;">
-        <div id="profile-content">
+      <section id="profile-view" style="display: none;">
+        <div id="profile-content" class="fade-in">
           <!-- Rendered dynamically -->
         </div>
-      </div>
+      </section>
 
-      <!-- Modal para añadir ejercicio -->
+      <!-- EXERCISE MODAL (REIMAGINED) -->
       <div id="add-exercise-modal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content glass">
           <div class="modal-header">
-            <h3 id="modal-title">Añadir Ejercicio</h3>
+            <h3 id="modal-title">Ejercicio</h3>
             <button class="close-modal"
               onclick="document.getElementById('add-exercise-modal').style.display='none'">×</button>
           </div>
-          <div class="modal-body">
-            <div class="input-group">
-              <label for="new-ex-name">Nombre</label>
-              <input type="text" id="new-ex-name" placeholder="Ej: Sentadilla">
-            </div>
-            <div class="input-group">
-              <label for="new-ex-sets">Series y Repes</label>
-              <input type="text" id="new-ex-sets" placeholder="Ej: 3 × 12">
-            </div>
-            <button id="save-ex-btn" class="primary-btn">Guardar Ejercicio</button>
+          <div class="modal-body" id="exercise-modal-body">
+            <!-- Injected by features.js:openAddModal and openEditModal -->
           </div>
         </div>
       </div>
