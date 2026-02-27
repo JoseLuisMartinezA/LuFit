@@ -1171,7 +1171,7 @@ input {
 }
 
 .delete-ex-btn::before {
-  content: '🗑️';
+  content: 'ðŸ—‘ï¸';
   font-size: 0.9rem;
 }
 
@@ -1202,7 +1202,7 @@ input {
 }
 
 .edit-ex-btn::before {
-  content: '✏️';
+  content: 'âœï¸';
   font-size: 0.9rem;
 }
 
@@ -1498,7 +1498,7 @@ body.is-dragging * {
 }
 
 .exercise-card.completed .checkmark::after {
-  content: "✓";
+  content: "âœ“";
   position: absolute;
   top: 50%;
   left: 50%;
@@ -3590,4 +3590,343 @@ body {
 
 .exercise-card.collapsed .exercise-logs {
   display: none;
+}
+
+
+
+/* ==========================================================================
+   CLEAN EXERCISE LOGS DESIGN
+   ========================================================================== */
+
+.exercise-logs {
+  background: #09090b !important;
+  margin: 0 12px 16px 12px !important;
+  border-radius: 12px !important;
+  padding: 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Row-based defaults (to be overridden if switching to columns) */
+.sets-header,
+.set-row {
+  display: grid !important;
+  grid-template-columns: 60px 70px 1fr 1fr !important;
+  gap: 12px !important;
+  align-items: center !important;
+}
+
+.sets-header span {
+  color: #64748b !important;
+  font-size: 0.75rem !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  text-align: center !important;
+}
+
+.sets-header span:first-child {
+  text-align: left !important;
+}
+
+.set-num {
+  color: #ff2d55 !important;
+  font-weight: 800 !important;
+  font-size: 1.3rem !important;
+  text-align: left !important;
+}
+
+.set-effort {
+  display: flex !important;
+  justify-content: center !important;
+}
+
+.effort-box {
+  width: 32px !important;
+  height: 32px !important;
+  background: #1a1a1e !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+}
+
+.log-input {
+  height: 52px !important;
+  background: #1a1a1e !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  color: white !important;
+  text-align: center !important;
+  font-size: 1.1rem !important;
+  font-weight: 800 !important;
+  width: 100% !important;
+}
+
+.log-input:focus {
+  border-color: #ff2d55 !important;
+}
+
+.log-input::placeholder {
+  color: #3f3f46 !important;
+}
+
+/* Columnar Layout Support */
+.exercise-logs.columnar {
+  display: flex !important;
+  flex-direction: row !important;
+  overflow-x: auto !important;
+  gap: 20px !important;
+  padding: 20px !important;
+}
+
+.log-labels {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 20px !important;
+  min-width: 90px !important;
+  color: #64748b !important;
+  font-size: 0.75rem !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+}
+
+.set-column {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 20px !important;
+  min-width: 60px !important;
+}
+
+/* ==========================================================================
+   COLUMNAR LAYOUT SYNC (VERTICAL ALIGNMENT)
+   ========================================================================== */
+
+.columnar {
+  display: flex !important;
+  align-items: flex-start !important;
+}
+
+.log-labels {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  padding-top: 10px !important;
+  gap: 32px !important; /* Spacing between label texts */
+}
+
+.label-cell {
+  height: 40px !important; /* Base height for alignment */
+  display: flex !important;
+  align-items: center !important;
+}
+
+.set-column {
+  gap: 15px !important; /* Spacing between set elements */
+}
+
+.log-labels span {
+  height: 52px !important; /* Matches input height */
+  display: flex !important;
+  align-items: center !important;
+}
+
+.log-labels span:first-child { height: 32px !important; } /* Matches set-num */
+.log-labels span:nth-child(2) { height: 32px !important; } /* Matches effort-box */
+
+
+/* ==========================================================================
+   V2 TRUE COLUMNAR LAYOUT (CATEGORY-BASED)
+   ========================================================================== */
+
+.columnar-v2 {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  padding: 16px 20px !important; /* Balanced horizontal padding */
+}
+
+.log-col {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important; /* Default centering for columns */
+  flex: 1 !important;
+}
+
+/* Specific column widths to match the previous request */
+.col-serie { flex: 0 0 60px !important; align-items: center !important; }
+.col-effort { flex: 0 0 70px !important; }
+.col-reps, .col-weight { flex: 1 !important; }
+
+.col-header {
+  color: #64748b !important;
+  font-size: 0.75rem !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  margin-bottom: 24px !important; /* Hueco entre cabecera y primera fila */
+  height: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+}
+
+/* Content spacing between "rows" */
+.cell-num, .cell-effort, .cell-input {
+  height: 52px !important; /* Matches input height */
+  margin-bottom: 24px !important; /* Hueco entre filas */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+}
+
+.cell-num {
+  color: #ff2d55 !important;
+  font-weight: 800 !important;
+  font-size: 1.3rem !important;
+}
+
+.log-input {
+  width: 100% !important;
+  height: 52px !important;
+  background: #1a1a1e !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  color: white !important;
+  text-align: center !important;
+  font-size: 1.1rem !important;
+  font-weight: 800 !important;
+}
+
+.effort-box {
+  width: 32px !important;
+  height: 32px !important;
+  background: #1a1a1e !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+}
+
+
+/* ==========================================================================
+   EQUAL WIDTH COLUMNS & MAXIMIZED WIDTH
+   ========================================================================== */
+
+.exercise-logs {
+  margin: 0 4px 16px 4px !important; /* Minimize side margins to give more room */
+  padding: 16px 8px !important;
+}
+
+.columnar-v2 {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: space-between !important;
+  gap: 8px !important; /* Slightly smaller gap to fit equal columns */
+  padding: 16px 4px !important;
+  width: 100% !important;
+}
+
+.log-col {
+  flex: 1 1 0 !important; /* Force all columns to be exactly the same width */
+  min-width: 0 !important; /* Allow columns to shrink equally */
+}
+
+.col-header {
+  font-size: 0.65rem !important; /* Slightly smaller to ensure "PESO (KG)" fits in its equal box */
+  white-space: nowrap !important;
+}
+
+.log-input {
+  width: 100% !important;
+  padding: 0 4px !important; /* Ensure content stays inside */
+}
+
+
+/* ==========================================================================
+   SYMMETRIC MAXIMIZED WIDTH FOR LOGGING TABLE
+   ========================================================================== */
+
+.exercise-logs {
+  margin-left: 10px !important;  /* Balanced margin on the left */
+  margin-right: 10px !important; /* Balanced margin on the right */
+  padding: 16px 0 !important;    /* Removing internal horizontal padding */
+}
+
+.columnar-v2 {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  gap: 0 !important; /* Managing space via column flex */
+}
+
+.log-col {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  text-align: center !important;
+}
+
+.col-header {
+  width: 100% !important;
+  justify-content: center !important;
+  padding: 0 !important;
+}
+
+.cell-num, .cell-effort, .cell-input {
+  width: 100% !important;
+  justify-content: center !important;
+}
+
+.log-input {
+  width: 85% !important; /* Leaving a tiny bit of space between equal columns */
+}
+
+
+/* ==========================================================================
+   FORCE FULL WIDTH FOR EXERCISE INFO
+   ========================================================================== */
+
+.exercise-main {
+  width: 100% !important;
+  display: flex !important;
+  box-sizing: border-box !important;
+}
+
+.exercise-info {
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+}
+
+.card-actions {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: flex-start !important;
+}
+
+
+/* ==========================================================================
+   FIX COLLAPSE LOGIC (PRIORITY)
+   ========================================================================== */
+
+.exercise-card.collapsed .exercise-logs {
+  display: none !important; /* Force hide when collapsed, overriding flex !important */
+  height: 0 !important;
+  overflow: hidden !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding: 0 !important;
+  opacity: 0 !important;
+}
+
+.exercise-main {
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.exercise-main:active {
+  background: rgba(255, 255, 255, 0.02);
 }

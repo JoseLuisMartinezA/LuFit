@@ -1034,6 +1034,34 @@ export async function loadExercises() {
             }));
         });
       }
+
+      // Fetch Prev Performance for placeholders
+      const currentWeekIdx = state.weeks.findIndex(w => w.id === state.currentWeekId);
+      if (currentWeekIdx > 0) {
+        const prevWeekId = state.weeks[currentWeekIdx - 1].id;
+        for (const ex of state.currentExercises) {
+          const prevExRes = await dbQuery(`
+             SELECT id FROM exercises 
+             WHERE week_id = ? AND (
+               (exercise_library_id IS NOT NULL AND exercise_library_id = (SELECT exercise_library_id FROM exercises WHERE id = ${ex.id}))
+               OR 
+               (custom_name IS NOT NULL AND custom_name = (SELECT custom_name FROM exercises WHERE id = ${ex.id}))
+             )
+             LIMIT 1`, [prevWeekId]);
+
+          if (prevExRes && prevExRes.results[0].response.result.rows.length > 0) {
+            const prevExId = prevExRes.results[0].response.result.rows[0][0].value;
+            const prevSetsRes = await dbQuery(`SELECT set_index, reps_done, weight_done FROM exercise_sets WHERE exercise_id = ? ORDER BY set_index`, [prevExId]);
+            if (prevSetsRes && prevSetsRes.results[0].type === 'ok') {
+              ex.prev_data = prevSetsRes.results[0].response.result.rows.map(ps => ({
+                index: parseInt(ps[0].value),
+                reps: ps[1].value,
+                weight: ps[2].value
+              }));
+            }
+          }
+        }
+      }
     }
   }
   renderRoutine();
@@ -1171,52 +1199,73 @@ export function renderRoutine() {
              onpointerdown="window.handlePointerDown(event, ${ex.id}, ${idx}, 'exercise')">
           <div class="exercise-main" onclick="window.toggleExerciseExpand(${ex.id})">
             <div class="exercise-info">
-              <span class="exercise-name">${ex.name}</span>
-              <span class="exercise-sets">${ex.series} x ${ex.reps}</span>
-            </div>
-            <div class="card-actions">
-               <button class="action-btn" onclick="event.stopPropagation(); window.openEditModal(${ex.id})">Editar</button>
-               <button class="action-btn" onclick="event.stopPropagation(); window.deleteExercise(${ex.id})">Borrar</button>
+              <span class="exercise-name" style="font-size: 1.25rem; font-weight: 800; margin-bottom: 6px;">${ex.name}</span>
+              <span class="exercise-sets" style="color: var(--text-secondary); font-weight: 600; margin-bottom: 15px;">${ex.series} x ${ex.reps}</span>
+              <div class="card-actions">
+                 <button class="action-btn" onclick="event.stopPropagation(); window.openEditModal(${ex.id})">Editar</button>
+                 <button class="action-btn" onclick="event.stopPropagation(); window.deleteExercise(${ex.id})">Borrar</button>
+              </div>
             </div>
           </div>
           
-          <!-- Logging Area -->
-          <div class="exercise-logs">
-             <div class="sets-header">
-                <span>Serie</span>
-                <span>Esfuerzo</span>
-                <span>Reps</span>
-                <span>Peso (${currentUnit})</span>
+          <!-- Logging Area (True Columnar Layout) -->
+          <div class="exercise-logs columnar-v2">
+             <!-- Column 1: Serie -->
+             <div class="log-col col-serie">
+                <span class="col-header">SERIE</span>
+                ${Array.from({ length: ex.series }).map((_, sIdx) => `
+                  <div class="cell-num">${sIdx + 1}</div>
+                `).join('')}
              </div>
-             ${Array.from({ length: ex.series }).map((_, sIdx) => {
-      const setInfo = ex.sets_data.find(s => s.index === sIdx) || { reps: '', weight: ex.weight || '', completed: false, sensation: null };
-      const dotColor = setInfo.sensation ? feedbackColors[setInfo.sensation] : 'transparent';
 
+             <!-- Column 2: Esfuerzo -->
+             <div class="log-col col-effort">
+                <span class="col-header">ESFUERZO</span>
+                ${Array.from({ length: ex.series }).map((_, sIdx) => {
+      const setInfo = ex.sets_data.find(s => s.index === sIdx) || { completed: false, sensation: null };
       return `
-                <div class="set-row">
-                   <div class="set-num">${sIdx + 1}</div>
-                   
-                   <div class="set-effort">
-                      <div class="effort-box ${setInfo.sensation || ''}" 
-                           onclick="window.toggleSetStatus(${ex.id}, ${sIdx}, ${setInfo.completed})">
-                      </div>
-                   </div>
-                   
-                   <div class="set-reps">
-                      <input type="number" class="log-input" placeholder="Ej: 6" 
-                             value="${setInfo.reps}" 
-                             step="1" inputmode="numeric"
-                             onchange="window.saveSetPerformance(${ex.id}, ${sIdx}, 'reps', this.value)">
-                   </div>
-                   
-                   <div class="set-weight">
-                       <input type="number" step="0.1" inputmode="decimal" class="log-input" placeholder="Ej: 10" 
-                              value="${setInfo.weight}" 
-                              onchange="window.saveSetPerformance(${ex.id}, ${sIdx}, 'weight', this.value)">
-                   </div>
-                </div>
-               `;
+                    <div class="cell-effort">
+                       <div class="effort-box ${setInfo.sensation || ''} ${setInfo.completed ? 'completed' : ''}"
+                            onclick="window.toggleSetStatus(${ex.id}, ${sIdx}, ${setInfo.completed})">
+                       </div>
+                    </div>`;
     }).join('')}
+             </div>
+
+             <!-- Column 3: Reps -->
+             <div class="log-col col-reps">
+                <span class="col-header">REPS</span>
+                ${Array.from({ length: ex.series }).map((_, sIdx) => {
+      const setInfo = ex.sets_data.find(s => s.index === sIdx) || { reps: null };
+      const prevData = ex.prev_data ? ex.prev_data.find(ps => ps.index === sIdx) : null;
+      const placeholderReps = prevData ? prevData.reps : '6';
+      return `
+                    <div class="cell-input">
+                       <input type="number" class="log-input" 
+                              placeholder="Ej: ${placeholderReps}"
+                              value="${setInfo.reps !== null ? setInfo.reps : ''}"
+                              step="1" inputmode="numeric"
+                              onchange="window.saveSetPerformance(${ex.id}, ${sIdx}, 'reps', this.value)">
+                    </div>`;
+    }).join('')}
+             </div>
+
+             <!-- Column 4: Peso -->
+             <div class="log-col col-weight">
+                <span class="col-header">PESO (KG)</span>
+                ${Array.from({ length: ex.series }).map((_, sIdx) => {
+      const setInfo = ex.sets_data.find(s => s.index === sIdx) || { weight: null };
+      const prevData = ex.prev_data ? ex.prev_data.find(ps => ps.index === sIdx) : null;
+      const placeholderWeight = prevData ? prevData.weight : (ex.weight || '20');
+      return `
+                    <div class="cell-input">
+                       <input type="number" step="0.1" inputmode="decimal" class="log-input" 
+                              placeholder="Ej: ${placeholderWeight}"
+                              value="${setInfo.weight !== null ? setInfo.weight : ''}"
+                              onchange="window.saveSetPerformance(${ex.id}, ${sIdx}, 'weight', this.value)">
+                    </div>`;
+    }).join('')}
+             </div>
           </div>
         </div>
       `;
@@ -1452,18 +1501,27 @@ export async function showSetFeedbackModal(exId, setIdx) {
     if (existing) existing.remove();
 
     const html = `
-      <div class="modal" id="${modalId}" style="display: flex;">
-        <div class="modal-content feedback-modal" style="max-width: 320px;">
-          <div class="modal-header">
-             <h3>Esfuerzo Serie ${setIdx + 1}</h3>
-             <button class="close-modal">×</button>
+      <div class="modal" id="${modalId}" style="display: flex;">      
+        <div class="modal-content feedback-modal" style="max-width: 320px; padding: 30px;">
+          <div class="modal-header" style="justify-content: center; margin-bottom: 25px; border: none;">
+             <h3 style="font-size: 1.4rem; font-weight: 800; text-align: center; margin: 0;">¿Cómo ha ido?</h3>
           </div>
           <div class="modal-body">
-             <div class="feedback-options mini">
-                <button class="feedback-option light" data-val="light">Ligero 🟢</button>
-                <button class="feedback-option optimal" data-val="optimal">Óptimo 🟠</button>
-                <button class="feedback-option excessive" data-val="excessive">Excesivo 🔴</button>
+             <p style="text-align: center; color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 20px;">Indica el nivel de esfuerzo de esta serie.</p>
+             <div class="feedback-options mini" style="display: flex; flex-direction: column; gap: 12px;">
+                <button class="feedback-option light" data-val="light" style="padding: 16px; border-radius: 12px; font-weight: 700; border: 1px solid rgba(34, 197, 94, 0.2); background: rgba(34, 197, 94, 0.05); color: #22c55e;">
+                  <span>🟢</span> Ligero / RPE < 7
+                </button>
+                <button class="feedback-option optimal" data-val="optimal" style="padding: 16px; border-radius: 12px; font-weight: 700; border: 1px solid rgba(250, 204, 21, 0.2); background: rgba(250, 204, 21, 0.05); color: #facc15;">
+                  <span>🟠</span> Óptimo / RPE 8-9
+                </button>
+                <button class="feedback-option excessive" data-val="excessive" style="padding: 16px; border-radius: 12px; font-weight: 700; border: 1px solid rgba(239, 68, 68, 0.2); background: rgba(239, 68, 68, 0.05); color: #ef4444;">
+                  <span>🔴</span> Al Límite / RPE 10
+                </button>
              </div>
+          </div>
+          <div style="margin-top: 25px; text-align: center;">
+             <button class="close-modal-alt" style="background: none; border: none; color: var(--text-secondary); font-size: 0.85rem; cursor: pointer; text-decoration: underline;">Omitir por ahora</button> 
           </div>
         </div>
       </div>
