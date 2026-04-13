@@ -1,0 +1,11 @@
+
+/* FIX FOR DROPDOWN OVERLAPPING */
+.selection-area {
+  position: relative !important;
+  z-index: 6000 !important; /* Más alto que el resto de la interfaz */
+}
+
+.week-options-container {
+  background: #000000 !important; /* Negro total absoluto */
+  box-shadow: 0 0 0 100vmax rgba(0,0,0,0.4); /* Sombra que oscurece el fondo (opcional) */
+}
