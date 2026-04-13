@@ -18,7 +18,8 @@ export function showAIPlannerModal() {
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Asistente Lu 🤖</h3>
-                <button class="close-modal" onclick="document.getElementById('ai-planner-modal').remove()">×</button>
+                <button class="close-modal" onclick="document.getElementById('ai-planner-modal').remove()">&times;</button>
+
             </div>
             <div class="modal-body">
                 <p style="margin-bottom: 1.5rem; color: var(--text-secondary); line-height: 1.5;">

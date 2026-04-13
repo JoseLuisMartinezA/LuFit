@@ -82,7 +82,7 @@
 
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
@@ -112,6 +112,140 @@
   border: 1px solid var(--panel-border);
   box-shadow: var(--lu-shadow);
 }
+
+/* CUSTOM WEEK DROPDOWN SELECTOR */
+.custom-week-dropdown {
+  position: relative;
+  width: 100%;
+  margin: 15px 0 25px;
+  z-index: 5000; /* Forzamos que esté por encima de la barra de días (z:100) */
+}
+
+.week-dropdown-trigger {
+  width: 100%;
+  background: var(--panel-color); /* Totalmente opaco */
+  border: 1px solid var(--panel-border);
+  padding: 14px 20px;
+  border-radius: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.week-dropdown-trigger:hover {
+  background: #252529; /* Un poco más claro pero opaco */
+  border-color: var(--lu-pink);
+}
+
+.trigger-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.trigger-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.trigger-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.week-options-container {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  width: 100%;
+  background-color: #0c0c0e !important; /* Negro total sólido de la app */
+  background: #0c0c0e !important;
+  opacity: 1 !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 16px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 9999 !important; /* Máxima prioridad */
+  box-shadow: 0 10px 40px rgba(0,0,0,0.8) !important;
+  padding: 8px;
+  display: none;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.week-options-container.open {
+  display: block;
+}
+
+.week-option-item {
+  /* Styles handled by the refined focus block at the end of the file */
+}
+
+.week-option-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateX(4px);
+}
+
+.week-option-item.active {
+  background: var(--lu-gradient);
+}
+
+.week-option-item.active .option-name,
+.week-option-item.active .option-date {
+  color: white !important;
+}
+
+.option-name {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.option-date {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: #1e1e24; /* Sólido */
+  padding: 4px 10px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+
+@keyframes slideTop {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Base Light Mode Overrides for Dropdown */
+body.light-mode .week-dropdown-trigger {
+  background: white !important;
+  border-color: #e2e8f0 !important;
+}
+
+body.light-mode .week-options-container {
+  background: white !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+body.light-mode .option-name {
+  color: #0f172a !important;
+}
+
+body.light-mode .option-date {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+body.light-mode .week-option-item:hover {
+  background: #f8fafc;
+}
+
 
 /* Light Mode Overrides */
 body.light-mode {
@@ -796,9 +930,45 @@ input {
 }
 
 .week-actions {
-  display: flex;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
   width: 100%;
+}
+
+.week-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 4px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+  border: 1px solid var(--panel-border);
+}
+
+.week-actions .secondary-btn {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.week-actions .danger-btn {
+  background: rgba(255, 69, 58, 0.1);
+  color: #ff453a;
+  border-color: rgba(255, 69, 58, 0.2);
+}
+
+.week-actions button:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.2);
+}
+
+.week-actions button:active {
+  transform: scale(0.95);
 }
 
 .secondary-btn,
@@ -1171,7 +1341,7 @@ input {
 }
 
 .delete-ex-btn::before {
-  content: 'ðŸ—‘ï¸';
+  content: 'Ã°Å¸â€”â€˜Ã¯Â¸Â';
   font-size: 0.9rem;
 }
 
@@ -1202,7 +1372,7 @@ input {
 }
 
 .edit-ex-btn::before {
-  content: 'âœï¸';
+  content: 'Ã¢Å“ÂÃ¯Â¸Â';
   font-size: 0.9rem;
 }
 
@@ -1341,7 +1511,7 @@ body.is-dragging * {
 
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
@@ -1498,7 +1668,7 @@ body.is-dragging * {
 }
 
 .exercise-card.completed .checkmark::after {
-  content: "âœ“";
+  content: "Ã¢Å“â€œ";
   position: absolute;
   top: 50%;
   left: 50%;
@@ -2257,18 +2427,6 @@ body {
   background: rgba(255, 82, 82, 0.2);
 }
 
-/* Week Actions update for 3 buttons */
-.week-actions {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  width: 100%;
-}
-
-.week-actions button {
-  padding: 10px 4px;
-  font-size: 0.8rem;
-}
 
 /* =================================== */
 /* NEW DASHBOARD STYLES */
@@ -3111,7 +3269,7 @@ body {
 
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
@@ -3929,4 +4087,77 @@ body {
 
 .exercise-main:active {
   background: rgba(255, 255, 255, 0.02);
+}
+
+/* GLOBAL MODAL PRIORITY */
+.modal {
+  z-index: 100000 !important;
+}
+
+/* FINAL REFINED DROPDOWN SYSTEM */
+.selection-area {
+  position: relative !important;
+  z-index: 500 !important;
+}
+
+.custom-week-dropdown {
+  position: relative;
+  z-index: 1000 !important; 
+}
+
+.week-options-container {
+  background: #1a1a1e !important; 
+  opacity: 1 !important;
+  z-index: 9999 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.8) !important;
+  padding: 12px !important;
+  border-radius: 20px !important;
+}
+
+.week-option-item {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 14px 18px !important;
+  margin-bottom: 10px !important;
+  background: #242429 !important;
+  border-radius: 14px !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+  opacity: 1 !important;
+}
+
+.week-option-item:last-child {
+  margin-bottom: 0 !important;
+}
+
+.week-option-item:hover {
+  background: #2d2d35 !important;
+  transform: translateX(4px);
+}
+
+.week-option-item.active {
+  background: linear-gradient(135deg, #d81b60, #ff8a65) !important;
+  box-shadow: 0 4px 15px rgba(216, 27, 96, 0.2);
+}
+
+.option-name {
+  font-weight: 600 !important;
+  font-size: 1rem !important;
+  color: white !important;
+}
+
+.option-date {
+  font-size: 0.75rem !important;
+  color: #94a3b8 !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  padding: 4px 10px !important;
+  border-radius: 10px !important;
+}
+
+.week-option-item.active .option-date {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
 }

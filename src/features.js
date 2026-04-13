@@ -1,5 +1,7 @@
 import { dbQuery, dbBatch } from './db.js';
+
 import { state, setCurrentUser } from './state.js';
+
 import { initTimer, startRestTimer } from './timer.js';
 import { showAIPlannerModal } from './ai_planner.js';
 
@@ -904,11 +906,15 @@ export async function duplicateRoutine(id) {
 
 export async function loadWeeks() {
   if (!state.currentRoutineId) return;
-  const res = await dbQuery("SELECT id, name FROM weeks WHERE routine_id = ? ORDER BY id ASC", [state.currentRoutineId]);
+  const res = await dbQuery("SELECT id, name, created_at FROM weeks WHERE routine_id = ? ORDER BY created_at DESC, id DESC", [state.currentRoutineId]);
 
   state.weeks = [];
   if (res && res.results[0].type === 'ok') {
-    state.weeks = res.results[0].response.result.rows.map(r => ({ id: parseInt(r[0].value), name: r[1].value }));
+    state.weeks = res.results[0].response.result.rows.map(r => ({ 
+      id: parseInt(r[0].value), 
+      name: r[1].value,
+      createdAt: r[2].value
+    }));
   }
 
   // If no weeks, verify if we need to migrate VERY old data (from before 'weeks' table exist? No, assuming standard structure)
@@ -916,12 +922,13 @@ export async function loadWeeks() {
   if (state.weeks.length === 0) {
     await createWeek("Semana 1", state.currentRoutineId, true);
   } else {
-    // Select last week by default
-    state.currentWeekId = state.weeks[state.weeks.length - 1].id;
+    // Select first week (newest) by default
+    state.currentWeekId = state.weeks[0].id;
     await loadDayTitles();
     await loadExercises();
   }
 }
+
 
 // INTELLIGENT COPY WEEK
 export async function createWeek(name, routineId = null, useDefault = false) {
@@ -945,12 +952,12 @@ export async function createWeek(name, routineId = null, useDefault = false) {
     await dbBatch(inserts);
   }
 
-  state.weeks.push({ id: newWeekId, name });
-  state.currentWeekId = newWeekId;
-  await loadDayTitles();
-  await loadExercises();
-  if (state.currentView === 'routines') renderRoutineDetail();
+  await loadWeeks();
+  if (state.currentView === 'routines' || state.currentView === 'routine-detail') {
+    renderRoutineDetail();
+  }
 }
+
 
 export async function createEmptyWeek(name, routineId, numDays) {
   const res = await dbQuery("INSERT INTO weeks (routine_id, user_id, name) VALUES (?, ?, ?)", [routineId, state.currentUser.id, name]);
@@ -1070,52 +1077,133 @@ export async function loadExercises() {
 export function renderWeekSelector() {
   const select = document.getElementById('week-select');
   if (select) {
-    select.innerHTML = state.weeks.map(w => `<option value="${w.id}" ${w.id == state.currentWeekId ? 'selected' : ''}>${w.name}</option>`).join('');
-    select.onchange = async (e) => {
-      state.currentWeekId = parseInt(e.target.value);
-      await loadDayTitles();
-      await loadExercises();
-      renderDaySelector();
-    };
+
+    select.style.display = 'none';
+    let container = document.getElementById('custom-week-selector');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'custom-week-selector';
+      container.className = 'custom-week-dropdown fade-in';
+      select.parentNode.insertBefore(container, select);
+    }
+
+    const currentWeek = state.weeks.find(w => w.id == state.currentWeekId) || state.weeks[0];
+    
+    container.innerHTML = `
+      <div class="week-dropdown-trigger" onclick="this.nextElementSibling.classList.toggle('open')">
+        <div class="trigger-content">
+          <span class="trigger-label">Semana Seleccionada</span>
+          <span class="trigger-value">${currentWeek ? currentWeek.name : 'Seleccionar'}</span>
+        </div>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m6 9 6 6 6-6"/>
+        </svg>
+      </div>
+      <div class="week-options-container">
+        ${state.weeks.map(w => {
+          const date = w.createdAt ? new Date(w.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : '---';
+          return `
+            <div class="week-option-item ${w.id == state.currentWeekId ? 'active' : ''}" 
+                 onclick="window.switchWeek(${w.id}); this.parentElement.classList.remove('open')">
+              <span class="option-name">${w.name}</span>
+              <span class="option-date">${date}</span>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+
+    // Close on outside click
+    document.addEventListener('click', (e) => {
+      if (!container.contains(e.target)) {
+        const options = container.querySelector('.week-options-container');
+        if (options) options.classList.remove('open');
+      }
+    });
+
   }
 
+
+  // --- Week Management Buttons ---
   const addBtn = document.getElementById('add-week-btn');
+  const deleteBtn = document.getElementById('delete-week-btn');
+  const renameBtn = document.getElementById('rename-week-btn');
+
   if (addBtn) {
+
     addBtn.onclick = async () => {
       showNamingModal("Nueva Semana", "", async (name) => {
         if (name) await createWeek(name);
       });
-    }
+    };
   }
 
-  const deleteBtn = document.getElementById('delete-week-btn');
   if (deleteBtn) {
     deleteBtn.onclick = async () => {
       if (state.weeks.length <= 1) return showAlert("Mínimo una semana.");
-      if (await showConfirm("¿Borrar semana?", "Borrar Semana", { isDanger: true, confirmText: "Borrar" })) {
-        await dbQuery("DELETE FROM weeks WHERE id = ?", [state.currentWeekId]);
-        await dbQuery("DELETE FROM day_titles WHERE week_id = ?", [state.currentWeekId]);
-        await dbQuery("DELETE FROM exercises WHERE week_id = ?", [state.currentWeekId]);
+      
+      const confirm = await showConfirm(
+        "Se eliminarán todos los registros definitivamente.", 
+        "¿Borrar semana?", 
+        { isDanger: true, confirmText: "Borrar" }
+      );
+
+
+
+
+      if (confirm) {
+        updateSyncStatus(true);
+        const weekId = state.currentWeekId;
+        
+        // 1. Delete associated sets first (nested subquery)
+        await dbQuery("DELETE FROM exercise_sets WHERE exercise_id IN (SELECT id FROM exercises WHERE week_id = ?)", [weekId]);
+        
+        // 2. Delete exercises
+        await dbQuery("DELETE FROM exercises WHERE week_id = ?", [weekId]);
+        
+        // 3. Delete day titles
+        await dbQuery("DELETE FROM day_titles WHERE week_id = ?", [weekId]);
+        
+        // 4. Finally delete the week record
+        await dbQuery("DELETE FROM weeks WHERE id = ?", [weekId]);
+        
         await loadWeeks();
         renderRoutineDetail();
+        updateSyncStatus(false);
+        showAlert("Semana eliminada correctamente.");
       }
-    }
+    };
   }
 
-  const renameBtn = document.getElementById('rename-week-btn');
+
+
+
   if (renameBtn) {
     renameBtn.onclick = async () => {
-      const week = state.weeks.find(w => w.id === state.currentWeekId);
+      const week = state.weeks.find(w => w.id == state.currentWeekId);
+      if (!week) return;
       showNamingModal("Renombrar Semana", week.name, async (name) => {
-        if (name) {
+        if (name && name !== week.name) {
           await dbQuery("UPDATE weeks SET name = ? WHERE id = ?", [name, state.currentWeekId]);
           await loadWeeks();
           renderRoutineDetail();
         }
       });
-    }
+    };
   }
 }
+
+
+export async function switchWeek(weekId) {
+  state.currentWeekId = weekId;
+  updateSyncStatus(true);
+  await loadDayTitles();
+  await loadExercises();
+  renderDaySelector();
+  renderWeekSelector();
+  updateSyncStatus(false);
+}
+
 
 export function renderDaySelector() {
   const container = document.querySelector('.day-selector');
@@ -1649,12 +1737,48 @@ export async function deleteExercise(id) {
 }
 
 export async function editDayTitle() {
-  const curr = state.dayTitles[state.currentDay];
-  showNamingModal("Renombrar Día", curr, async (newT) => {
-    if (newT) {
-      await dbQuery("UPDATE day_titles SET title = ? WHERE week_id = ? AND day_index = ?", [newT, state.currentWeekId, state.currentDay]);
-      state.dayTitles[state.currentDay] = newT;
+  const currTitle = state.dayTitles[state.currentDay] || `Día ${state.currentDay}`;
+  const currIndex = state.currentDay;
+
+  showDayEditModal("Editar Día", currTitle, currIndex, async (newT, newI) => {
+    if (!newT || !newI) return;
+    const oldI = currIndex;
+
+    // Verificar si el índice cambió y si ya está en uso
+    if (newI !== oldI && state.dayTitles[newI]) {
+      showAlert(`El Día ${newI} ya existe en esta semana. Elige otro número o elimina el existente.`);
+      return;
+    }
+
+    updateSyncStatus(true);
+    try {
+      if (newI !== oldI) {
+        // Actualización completa: Título e Índice
+        // Usamos una transacción o simplemente actualizamos en orden si no hay conflicto de PK
+        await dbQuery("UPDATE day_titles SET day_index = ?, title = ? WHERE week_id = ? AND day_index = ?",
+          [newI, newT, state.currentWeekId, oldI]);
+        await dbQuery("UPDATE exercises SET day_index = ? WHERE week_id = ? AND day_index = ?",
+          [newI, state.currentWeekId, oldI]);
+
+        // Actualizar estado local
+        delete state.dayTitles[oldI];
+        state.dayTitles[newI] = newT;
+        state.currentDay = newI;
+        await loadDayTitles(); // Recarga dayOrder y dayTitles desde BD para consistencia
+      } else {
+        // Solo cambio de título
+        await dbQuery("UPDATE day_titles SET title = ? WHERE week_id = ? AND day_index = ?",
+          [newT, state.currentWeekId, oldI]);
+        state.dayTitles[oldI] = newT;
+      }
+
+      renderDaySelector();
       renderRoutine();
+    } catch (err) {
+      console.error("Error editing day", err);
+      showAlert("Error al guardar los cambios en el día.");
+    } finally {
+      updateSyncStatus(false);
     }
   });
 }
@@ -1933,6 +2057,61 @@ export function showNamingModal(title, initialValue, onConfirm) {
   }
 
   document.querySelector(`#${modalId} .close-modal`).onclick = () => modalEl.remove();
+}
+
+/**
+ * Muestra un modal especializado para editar nombre y número de día
+ */
+export function showDayEditModal(title, initialTitle, initialIndex, onConfirm) {
+  const modalId = 'day-edit-modal';
+  const existing = document.getElementById(modalId);
+  if (existing) existing.remove();
+
+  const html = `
+    <div class="modal" id="${modalId}" style="display: flex;">
+      <div class="modal-content glass" style="max-width: 400px;">
+        <div class="modal-header">
+           <h3>${title}</h3>
+           <button class="close-modal">×</button>
+        </div>
+        <div class="modal-body" style="padding-top: 20px;">
+           <div class="input-group" style="margin-bottom: 20px;">
+              <label style="display: block; margin-bottom: 8px; font-size: 0.9rem; opacity: 0.8;">Nombre del Día</label>
+              <input type="text" id="${modalId}-title" value="${initialTitle}" placeholder="Ej: Pecho y Tríceps" autofocus style="width: 100%;">
+           </div>
+           <div class="input-group" style="margin-bottom: 24px;">
+              <label style="display: block; margin-bottom: 8px; font-size: 0.9rem; opacity: 0.8;">Número del Día (1-7)</label>
+              <input type="number" id="${modalId}-index" value="${initialIndex}" min="1" max="7" style="width: 100%;">
+           </div>
+           <button class="primary-btn full-width" id="${modalId}-confirm-btn" style="width: 100%; justify-content: center;">Guardar Cambios</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', html);
+
+  const modalEl = document.getElementById(modalId);
+  const titleInput = document.getElementById(modalId + '-title');
+  const indexInput = document.getElementById(modalId + '-index');
+
+  const handleConfirm = () => {
+    const newT = titleInput.value.trim();
+    const newI = parseInt(indexInput.value);
+    if (!newT) return;
+    if (isNaN(newI) || newI < 1 || newI > 7) {
+      showAlert("El número de día debe estar entre 1 y 7.");
+      return;
+    }
+    modalEl.remove();
+    onConfirm(newT, newI);
+  };
+
+  document.getElementById(`${modalId}-confirm-btn`).onclick = handleConfirm;
+  document.querySelector(`#${modalId} .close-modal`).onclick = () => modalEl.remove();
+
+  titleInput.focus();
+  titleInput.onkeydown = (e) => { if (e.key === 'Enter') indexInput.focus(); };
+  indexInput.onkeydown = (e) => { if (e.key === 'Enter') handleConfirm(); };
 }
 
 /**
@@ -2560,9 +2739,11 @@ if (typeof window !== 'undefined') {
     showCreateRoutineModal, confirmCreateRoutine, addDay, setDay, editDayTitle,
     toggleExercise, openEditModal, openAddModal, deleteExercise, updateWeight, deleteDay,
     handlePointerDown, openAddModal, renderProfile, renderRoutinesList, showAlert, showConfirm, showNamingModal,
+    showDayEditModal,
     showAddRoutineContextMenu, handleAddRoutinePointerDown, handleAddRoutinePointerUp, openCalendarModal,
     showCalendarDayDetail, showAIPlannerModal, createRoutinePrompt, createRoutine,
     showWeightLogModal, saveWeightLog, deleteWeightLog, showWeightHistoryModal, exportUserData, initWeightChart, saveSetPerformance,
-    toggleExerciseExpand, toggleSetStatus
+    toggleExerciseExpand, toggleSetStatus, switchWeek
   });
 }
+
